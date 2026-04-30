@@ -9,6 +9,9 @@ const flatSchema = mongoose.Schema(
     },
 
     address: { type: String, required: true },
+    name: { type: String, required: true },
+    number: { type: String, required: false },
+    holdingNo: { type: String, required: true },
     type: { type: String, required: true, enum: ["house", "apartment"] },
     area: { type: Number, required: true },
     price: { type: Number, required: true },
