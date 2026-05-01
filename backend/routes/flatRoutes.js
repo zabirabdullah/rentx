@@ -16,7 +16,9 @@ router.get("/", async (req, res) => {
 
     res.json(flats);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching flats", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error fetching flats", error: error.message });
   }
 });
 
@@ -33,16 +35,36 @@ router.get("/:id", async (req, res) => {
 
     res.json(flat);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching flat", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error fetching flat", error: error.message });
   }
 });
 
 router.post("/", async (req, res) => {
   try {
-    const ownerId = req.body.ownerId;
-    if (!ownerId) {
-      return res.status(400).json({ message: "Owner is required and must be a registered user" });
+    // Validate all required fields
+    const requiredFields = [
+      "ownerId",
+      "address",
+      "name",
+      "holdingNo",
+      "type",
+      "area",
+      "price",
+      "service",
+      "storey",
+      "position",
+    ];
+    const missingFields = requiredFields.filter((field) => !req.body[field]);
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        message: `Missing required fields: ${missingFields.join(", ")}`,
+      });
     }
+
+    const ownerId = req.body.ownerId;
 
     if (!mongoose.isValidObjectId(ownerId)) {
       return res.status(400).json({ message: "Invalid owner id" });
@@ -50,8 +72,19 @@ router.post("/", async (req, res) => {
 
     const owner = await User.findById(ownerId);
     if (!owner) {
-      return res.status(400).json({ message: "Owner not found. Please register the owner first." });
+      return res
+        .status(400)
+        .json({ message: "Owner not found. Please register the owner first." });
     }
+
+    // Check if the user has owner role
+    if (owner.role !== "owner" && owner.role !== "admin") {
+      return res.status(403).json({
+        message:
+          "Only users with owner role can create flats. Tenant users cannot create flats.",
+      });
+    }
+
     const newFlat = await Flat.create({
       ...req.body,
       area: Number(req.body.area),
@@ -62,7 +95,8 @@ router.post("/", async (req, res) => {
       balcony: Number(req.body.balcony ?? 0),
       storey: Number(req.body.storey),
       images: [fallbackImage],
-      isAvailable: req.body.isAvailable !== "false" && req.body.isAvailable !== false,
+      isAvailable:
+        req.body.isAvailable !== "false" && req.body.isAvailable !== false,
     });
 
     res.status(201).json(newFlat);
@@ -75,15 +109,48 @@ router.post("/", async (req, res) => {
 
 router.put("/:id", async (req, res) => {
   try {
+    // Get the current flat to check its owner
+    const currentFlat = await Flat.findById(req.params.id);
+    if (!currentFlat) {
+      return res.status(404).json({ message: "Flat not found" });
+    }
+
+    // Determine which owner to check (new owner if provided, otherwise current owner)
+    const ownerIdToCheck = req.body.ownerId || currentFlat.ownerId;
+
+    if (!mongoose.isValidObjectId(ownerIdToCheck)) {
+      return res.status(400).json({ message: "Invalid owner id" });
+    }
+
+    const owner = await User.findById(ownerIdToCheck);
+    if (!owner) {
+      return res.status(400).json({
+        message: "Owner not found. Please register the owner first.",
+      });
+    }
+
+    // Check if the owner has owner role
+    if (owner.role !== "owner" && owner.role !== "admin") {
+      return res.status(403).json({
+        message:
+          "Only users with owner role can update flats. Tenant users cannot update flats.",
+      });
+    }
+
     const updateData = {
       ...req.body,
       area: req.body.area !== undefined ? Number(req.body.area) : undefined,
       price: req.body.price !== undefined ? Number(req.body.price) : undefined,
-      service: req.body.service !== undefined ? Number(req.body.service) : undefined,
-      bedroom: req.body.bedroom !== undefined ? Number(req.body.bedroom) : undefined,
-      bathroom: req.body.bathroom !== undefined ? Number(req.body.bathroom) : undefined,
-      balcony: req.body.balcony !== undefined ? Number(req.body.balcony) : undefined,
-      storey: req.body.storey !== undefined ? Number(req.body.storey) : undefined,
+      service:
+        req.body.service !== undefined ? Number(req.body.service) : undefined,
+      bedroom:
+        req.body.bedroom !== undefined ? Number(req.body.bedroom) : undefined,
+      bathroom:
+        req.body.bathroom !== undefined ? Number(req.body.bathroom) : undefined,
+      balcony:
+        req.body.balcony !== undefined ? Number(req.body.balcony) : undefined,
+      storey:
+        req.body.storey !== undefined ? Number(req.body.storey) : undefined,
       isAvailable:
         req.body.isAvailable !== undefined
           ? req.body.isAvailable !== "false" && req.body.isAvailable !== false
@@ -93,18 +160,6 @@ router.put("/:id", async (req, res) => {
     const sanitizedUpdateData = Object.fromEntries(
       Object.entries(updateData).filter(([, value]) => value !== undefined),
     );
-
-    // If ownerId is present in update, ensure the owner exists
-    if (sanitizedUpdateData.ownerId) {
-      if (!mongoose.isValidObjectId(sanitizedUpdateData.ownerId)) {
-        return res.status(400).json({ message: "Invalid owner id" });
-      }
-
-      const ownerExists = await User.findById(sanitizedUpdateData.ownerId);
-      if (!ownerExists) {
-        return res.status(400).json({ message: "Owner not found. Please register the owner first." });
-      }
-    }
 
     const updatedFlat = await Flat.findByIdAndUpdate(
       req.params.id,
@@ -121,21 +176,41 @@ router.put("/:id", async (req, res) => {
 
     res.json(updatedFlat);
   } catch (error) {
-    res.status(500).json({ message: "Error updating flat", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error updating flat", error: error.message });
   }
 });
 
 router.delete("/:id", async (req, res) => {
   try {
-    const deletedFlat = await Flat.findByIdAndDelete(req.params.id);
-
-    if (!deletedFlat) {
+    const flat = await Flat.findById(req.params.id);
+    if (!flat) {
       return res.status(404).json({ message: "Flat not found" });
     }
 
+    // Check if the owner has owner role
+    const owner = await User.findById(flat.ownerId);
+    if (!owner) {
+      return res.status(400).json({
+        message: "Owner not found. Cannot delete flat.",
+      });
+    }
+
+    if (owner.role !== "owner" && owner.role !== "admin") {
+      return res.status(403).json({
+        message:
+          "Only users with owner role can delete flats. Tenant users cannot delete flats.",
+      });
+    }
+
+    const deletedFlat = await Flat.findByIdAndDelete(req.params.id);
+
     res.json({ message: "Flat deleted successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Error deleting flat", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error deleting flat", error: error.message });
   }
 });
 
