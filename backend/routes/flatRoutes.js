@@ -61,7 +61,6 @@ router.get("/", async (req, res) => {
       },
     ]);
 
-    // Transform the data to match the expected format
     const formattedFlats = flats.map((flat) => ({
       ...flat,
       ownerId: flat.ownerData,
@@ -134,7 +133,6 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ message: "Flat not found" });
     }
 
-    // Transform the data to match the expected format
     const result = {
       ...flat[0],
       ownerId: flat[0].ownerData,
@@ -150,7 +148,6 @@ router.get("/:id", async (req, res) => {
 
 router.post("/", async (req, res) => {
   try {
-    // Validate all required fields
     const requiredFields = [
       "ownerId",
       "address",
@@ -184,7 +181,6 @@ router.post("/", async (req, res) => {
         .json({ message: "Owner not found. Please register the owner first." });
     }
 
-    // Check if the user has owner role
     if (owner.role !== "owner" && owner.role !== "admin") {
       return res.status(403).json({
         message:
@@ -216,13 +212,11 @@ router.post("/", async (req, res) => {
 
 router.put("/:id", async (req, res) => {
   try {
-    // Get the current flat to check its owner
     const currentFlat = await Flat.findById(req.params.id);
     if (!currentFlat) {
       return res.status(404).json({ message: "Flat not found" });
     }
 
-    // Determine which owner to check (new owner if provided, otherwise current owner)
     const ownerIdToCheck = req.body.ownerId || currentFlat.ownerId;
 
     if (!mongoose.isValidObjectId(ownerIdToCheck)) {
@@ -236,7 +230,6 @@ router.put("/:id", async (req, res) => {
       });
     }
 
-    // Check if the owner has owner role
     if (owner.role !== "owner" && owner.role !== "admin") {
       return res.status(403).json({
         message:
@@ -296,7 +289,6 @@ router.delete("/:id", async (req, res) => {
       return res.status(404).json({ message: "Flat not found" });
     }
 
-    // Check if the owner has owner role
     const owner = await User.findById(flat.ownerId);
     if (!owner) {
       return res.status(400).json({

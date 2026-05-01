@@ -173,7 +173,6 @@ function App() {
     setSaving(true);
     setMessage("");
 
-    // Ensure owner is selected and registered
     if (!form.ownerId) {
       setMessage("Please select a registered owner before adding a flat.");
       setSaving(false);

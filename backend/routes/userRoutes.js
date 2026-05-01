@@ -3,8 +3,6 @@ import User from "../models/userModel.js";
 
 const router = express.Router();
 
-// @desc    Fetch all users
-// @route   GET /api/users
 router.get("/", async (req, res) => {
   try {
     const users = await User.find({}).select("-password");
@@ -14,8 +12,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-// @desc    Create a new user
-// @route   POST /api/users
 router.post("/", async (req, res) => {
   try {
     const { name, email, password, phone, role } = req.body;
