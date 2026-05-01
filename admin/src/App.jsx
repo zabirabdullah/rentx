@@ -54,9 +54,11 @@ function App() {
     if (typeof user === "string") return user.includes("@") ? user.split("@")[0] : "Unknown";
 
     const name = user.name || (user.email ? user.email.split("@")[0] : "Unknown");
-    const phone = user.phone || "";
+    const phone = user.phone ? user.phone.trim() : "";
 
-    return phone ? `${name}(${phone})` : name;
+    if (!phone) return name;
+    const displayPhone = phone.length > 15 ? phone.slice(0, 12) + "..." : phone;
+    return `${name} (${displayPhone})`;
   };
 
   const getOwnerDisplay = (owner) => {
@@ -70,9 +72,11 @@ function App() {
     }
 
     const name = owner.name || (owner.email ? owner.email.split("@")[0] : "Unknown");
-    const phone = owner.phone || "";
+    const phone = owner.phone ? owner.phone.trim() : "";
 
-    return phone ? `${name}(${phone})` : name;
+    if (!phone) return name;
+    const displayPhone = phone.length > 15 ? phone.slice(0, 12) + "..." : phone;
+    return `${name} (${displayPhone})`;
   };
 
   const loadUsers = async () => {
