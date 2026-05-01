@@ -10,11 +10,64 @@ const fallbackImage =
 
 router.get("/", async (req, res) => {
   try {
-    const flats = await Flat.find({})
-      .populate("ownerId", "name email phone role")
-      .sort({ createdAt: -1 });
+    const flats = await Flat.aggregate([
+      {
+        $lookup: {
+          from: "users",
+          localField: "ownerId",
+          foreignField: "_id",
+          as: "ownerData",
+        },
+      },
+      {
+        $match: {
+          "ownerData.role": { $in: ["owner", "admin"] },
+        },
+      },
+      {
+        $unwind: "$ownerData",
+      },
+      {
+        $sort: { createdAt: -1 },
+      },
+      {
+        $project: {
+          _id: 1,
+          ownerId: 1,
+          address: 1,
+          name: 1,
+          number: 1,
+          holdingNo: 1,
+          type: 1,
+          area: 1,
+          price: 1,
+          service: 1,
+          bedroom: 1,
+          bathroom: 1,
+          balcony: 1,
+          storey: 1,
+          position: 1,
+          images: 1,
+          description: 1,
+          isAvailable: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          "ownerData._id": 1,
+          "ownerData.name": 1,
+          "ownerData.email": 1,
+          "ownerData.phone": 1,
+          "ownerData.role": 1,
+        },
+      },
+    ]);
 
-    res.json(flats);
+    // Transform the data to match the expected format
+    const formattedFlats = flats.map((flat) => ({
+      ...flat,
+      ownerId: flat.ownerData,
+    }));
+
+    res.json(formattedFlats);
   } catch (error) {
     res
       .status(500)
@@ -24,16 +77,70 @@ router.get("/", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   try {
-    const flat = await Flat.findById(req.params.id).populate(
-      "ownerId",
-      "name email phone role",
-    );
+    const flat = await Flat.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(req.params.id),
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "ownerId",
+          foreignField: "_id",
+          as: "ownerData",
+        },
+      },
+      {
+        $match: {
+          "ownerData.role": { $in: ["owner", "admin"] },
+        },
+      },
+      {
+        $unwind: "$ownerData",
+      },
+      {
+        $project: {
+          _id: 1,
+          ownerId: 1,
+          address: 1,
+          name: 1,
+          number: 1,
+          holdingNo: 1,
+          type: 1,
+          area: 1,
+          price: 1,
+          service: 1,
+          bedroom: 1,
+          bathroom: 1,
+          balcony: 1,
+          storey: 1,
+          position: 1,
+          images: 1,
+          description: 1,
+          isAvailable: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          "ownerData._id": 1,
+          "ownerData.name": 1,
+          "ownerData.email": 1,
+          "ownerData.phone": 1,
+          "ownerData.role": 1,
+        },
+      },
+    ]);
 
-    if (!flat) {
+    if (!flat || flat.length === 0) {
       return res.status(404).json({ message: "Flat not found" });
     }
 
-    res.json(flat);
+    // Transform the data to match the expected format
+    const result = {
+      ...flat[0],
+      ownerId: flat[0].ownerData,
+    };
+
+    res.json(result);
   } catch (error) {
     res
       .status(500)
