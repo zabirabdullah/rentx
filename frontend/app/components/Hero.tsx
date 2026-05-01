@@ -14,18 +14,18 @@ export function Hero() {
         {/* Soft UI Search Bar */}
         <div className="glass-panel p-4 rounded-3xl shadow-2xl max-w-4xl mx-auto border border-white/20">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="px-4 py-2 border-r border-slate-200 last:border-0">
+            <div className="px-4 py-2 border-r border-slate-200 last:border-0 rounded-2xl transition-all duration-200 focus-within:bg-slate-50/50">
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Area/Thana</label>
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-xl" data-icon="location_on">location_on</span>
-                <input className="w-full bg-transparent border-0 p-0 focus:ring-0 text-slate-900 font-medium placeholder:text-slate-400" placeholder="Gulshan, Dhaka" type="text"/>
+              <div className="group flex items-center gap-2">
+                <span className="material-symbols-outlined text-slate-400 text-xl transition-all duration-200 group-focus-within:text-primary" data-icon="location_on">location_on</span>
+                <input className="w-full bg-transparent border-0 p-0 outline-none focus:outline-none focus:ring-0 text-slate-900 font-medium placeholder:text-slate-400 transition-all duration-200" placeholder="Gulshan, Dhaka" type="text"/>
               </div>
             </div>
-            <div className="px-4 py-2 border-r border-slate-200 last:border-0">
+            <div className="px-4 py-2 border-r border-slate-200 last:border-0 rounded-2xl transition-all duration-200 focus-within:bg-slate-50/50">
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Flat Type</label>
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-xl" data-icon="apartment">apartment</span>
-                <select className="w-full bg-transparent border-0 p-0 focus:ring-0 text-slate-900 font-medium appearance-none">
+              <div className="group flex items-center gap-2">
+                <span className="material-symbols-outlined text-slate-400 text-xl transition-all duration-200 group-focus-within:text-primary" data-icon="apartment">apartment</span>
+                <select className="w-full bg-transparent border-0 p-0 outline-none focus:outline-none focus:ring-0 text-slate-900 font-medium appearance-none transition-all duration-200">
                   <option>3 BHK Luxury</option>
                   <option>Penthouse</option>
                   <option>Studio</option>
@@ -33,11 +33,11 @@ export function Hero() {
                 </select>
               </div>
             </div>
-            <div className="px-4 py-2 border-r border-slate-200 last:border-0">
+            <div className="px-4 py-2 border-r border-slate-200 last:border-0 rounded-2xl transition-all duration-200 focus-within:bg-slate-50/50">
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Price Range</label>
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-xl" data-icon="payments">payments</span>
-                <input className="w-full bg-transparent border-0 p-0 focus:ring-0 text-slate-900 font-medium placeholder:text-slate-400" placeholder="৳50k - ৳250k" type="text"/>
+              <div className="group flex items-center gap-2">
+                <span className="material-symbols-outlined text-slate-400 text-xl transition-all duration-200 group-focus-within:text-primary" data-icon="payments">payments</span>
+                <input className="w-full bg-transparent border-0 p-0 outline-none focus:outline-none focus:ring-0 text-slate-900 font-medium placeholder:text-slate-400 transition-all duration-200" placeholder="৳50k - ৳250k" type="text"/>
               </div>
             </div>
             <div className="flex items-center justify-center p-2">
