@@ -29,6 +29,7 @@ function App() {
   const [form, setForm] = useState(initialFormState);
   const [editingId, setEditingId] = useState(null);
   const [selectedOwnerId, setSelectedOwnerId] = useState("");
+  const [ownerSearchQuery, setOwnerSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -51,7 +52,11 @@ function App() {
   const formatUserDisplay = (user) => {
     if (!user) return "Unknown";
     if (typeof user === "string") return user.includes("@") ? user.split("@")[0] : "Unknown";
-    return user.name || (user.email ? user.email.split("@")[0] : "Unknown");
+
+    const name = user.name || (user.email ? user.email.split("@")[0] : "Unknown");
+    const phone = user.phone || "";
+
+    return phone ? `${name}(${phone})` : name;
   };
 
   const getOwnerDisplay = (owner) => {
@@ -63,7 +68,11 @@ function App() {
       }
       return owner.includes("@") ? owner.split("@")[0] : "Unknown";
     }
-    return owner.name || (owner.email ? owner.email.split("@")[0] : "Unknown");
+
+    const name = owner.name || (owner.email ? owner.email.split("@")[0] : "Unknown");
+    const phone = owner.phone || "";
+
+    return phone ? `${name}(${phone})` : name;
   };
 
   const loadUsers = async () => {
@@ -110,9 +119,21 @@ function App() {
   }, [flats, selectedOwnerId]);
 
   const ownerOptions = useMemo(
-    () => users,
+    () => users.filter((user) => user.role === "owner"),
     [users],
   );
+
+  const filteredOwnerOptions = useMemo(() => {
+    if (!ownerSearchQuery.trim()) {
+      return ownerOptions;
+    }
+    const query = ownerSearchQuery.toLowerCase();
+    return ownerOptions.filter((user) => {
+      const name = (user.name || "").toLowerCase();
+      const phone = (user.phone || "").toLowerCase();
+      return name.includes(query) || phone.includes(query);
+    });
+  }, [ownerOptions, ownerSearchQuery]);
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
@@ -129,6 +150,7 @@ function App() {
 
   const handleAddFlatClick = () => {
     resetForm();
+    setOwnerSearchQuery("");
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
@@ -183,6 +205,7 @@ function App() {
 
       await loadFlats();
       resetForm();
+      setOwnerSearchQuery("");
       setMessage(editingId ? "Flat updated." : "Flat added.");
     } catch (error) {
       setMessage(error.message || "Unable to save flat");
@@ -279,13 +302,23 @@ function App() {
             <div className="form-grid">
               <label className="span-2">
                 Owner
+                <input
+                  type="text"
+                  placeholder="Search by name or phone..."
+                  value={ownerSearchQuery}
+                  onChange={(e) => setOwnerSearchQuery(e.target.value)}
+                />
                 <select name="ownerId" value={form.ownerId} onChange={handleChange} required>
                   <option value="">Select owner</option>
-                  {ownerOptions.map((user) => (
-                    <option key={user._id} value={user._id}>
-                      {formatUserDisplay(user)}
-                    </option>
-                  ))}
+                  {filteredOwnerOptions.length > 0 ? (
+                    filteredOwnerOptions.map((user) => (
+                      <option key={user._id} value={user._id}>
+                        {formatUserDisplay(user)}
+                      </option>
+                    ))
+                  ) : (
+                    <option disabled>No owners found</option>
+                  )}
                 </select>
               </label>
               <label>
