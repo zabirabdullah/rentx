@@ -8,6 +8,7 @@ const flatSchema = mongoose.Schema(
       ref: "User",
     },
 
+
     address: { type: String, required: true },
     name: { type: String, required: true },
     number: { type: String, required: false },
