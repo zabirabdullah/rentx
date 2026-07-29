@@ -32,9 +32,9 @@ const propertySchema = mongoose.Schema(
 
     // Optional / category-dependent — not every category needs every field
     name: { type: String }, // e.g. building name
-    storey: { type: Number },
+    storey: { type: Number, required: true },
     position: { type: String },
-    elevator: { type: Boolean, default: false },
+    elevator: { type: Boolean, required: true, default: false },
     bedroom: { type: Number },
     bathroom: { type: Number },
     balcony: { type: Number },

@@ -6,7 +6,7 @@ import {
   updateProperty,
   deleteProperty,
 } from "../controllers/propertyController.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect, protectOptional } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
 
 const router = express.Router();
@@ -18,7 +18,7 @@ router.route("/")
 
 // @route   /api/properties/:id
 router.route("/:id")
-  .get(getPropertyById) // Public: anyone can view a specific property
+  .get(protectOptional, getPropertyById) // Public: but identifies user to check if they can see unavailable properties
   .put(protect, authorize(["owner"]), updateProperty) // Private: Owner only
   .delete(protect, authorize(["owner", "admin"]), deleteProperty); // Private: Owner or Admin
 

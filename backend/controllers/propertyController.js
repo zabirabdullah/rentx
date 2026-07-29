@@ -29,12 +29,20 @@ const getProperties = asyncHandler(async (req, res) => {
 const getPropertyById = asyncHandler(async (req, res) => {
   const property = await Property.findById(req.params.id).populate("ownerId", "name email phone");
 
-  if (property) {
-    res.json(property);
-  } else {
+  if (!property) {
     res.status(404);
     throw new Error("Property not found");
   }
+
+  // If the property is not available, only the owner or an admin can view it
+  if (!property.isAvailable) {
+    if (!req.user || (property.ownerId._id.toString() !== req.user._id.toString() && req.user.role !== "admin")) {
+      res.status(404);
+      throw new Error("Property not found or is no longer available");
+    }
+  }
+
+  res.json(property);
 });
 
 // @desc    Create a property
@@ -47,9 +55,20 @@ const createProperty = asyncHandler(async (req, res) => {
   } = req.body;
 
   // Basic required fields check
-  if (!category || !address || !holdingNo || !area || !rentPrice || !location || !location.lat || !location.lng || !images || images.length === 0) {
+  if (
+    !category || !address || !holdingNo || !area || !rentPrice || 
+    storey === undefined || elevator === undefined || 
+    !location || !location.lat || !location.lng || 
+    !images || images.length === 0
+  ) {
     res.status(400);
-    throw new Error("Please provide all required fields, including location and at least one image");
+    throw new Error("Please provide all required fields (category, address, holdingNo, area, rentPrice, storey, elevator, location, images)");
+  }
+
+  const allowedCategories = ["house", "office", "commercial_space", "godown", "garage", "atm_booth"];
+  if (!allowedCategories.includes(category)) {
+    res.status(400);
+    throw new Error("Invalid category selected. No other values allowed.");
   }
 
   // Category specific validation

@@ -6,6 +6,7 @@ import errorHandler from "./middleware/errorMiddleware.js";
 import userRoutes from "./routes/userRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import propertyRoutes from "./routes/propertyRoutes.js";
+import companyRoutes from "./routes/companyRoutes.js";
 
 // Connect to the database
 connectDB();
@@ -26,6 +27,7 @@ app.get("/", (req, res) => {
 app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/properties", propertyRoutes);
+app.use("/api/companies", companyRoutes);
 
 // Central error handler — must be after all routes
 app.use(errorHandler);

@@ -37,4 +37,19 @@ const protect = async (req, res, next) => {
   }
 };
 
-export { protect };
+const protectOptional = async (req, res, next) => {
+  let token;
+  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+    try {
+      token = req.headers.authorization.split(" ")[1];
+      const decodedToken = await auth.verifyIdToken(token);
+      const user = await User.findOne({ firebaseUid: decodedToken.uid });
+      if (user) req.user = user;
+    } catch (error) {
+      // Do nothing, just proceed as an unauthenticated request
+    }
+  }
+  next();
+};
+
+export { protect, protectOptional };
