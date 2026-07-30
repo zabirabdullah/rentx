@@ -5,7 +5,6 @@ import Home from './Home';
 import RegisterPage from './components/RegisterPage';
 import LoginPage from './components/LoginPage';
 import DashboardLayout from './components/dashboard/DashboardLayout';
-import AuthTest from './components/AuthTest'; // Temporary route for testing auth
 
 // Owner pages
 import OwnerOverview from './components/dashboard/owner/OwnerOverview';
@@ -42,7 +41,6 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/test-auth" element={<AuthTest />} />
 
           {/* Dashboard — nested routes */}
           <Route path="/dashboard" element={<DashboardLayout />}>

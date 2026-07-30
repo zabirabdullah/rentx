@@ -5,8 +5,8 @@ import asyncHandler from "../utils/asyncHandler.js";
 // @route   GET /api/properties
 // @access  Public
 const getProperties = asyncHandler(async (req, res) => {
-  const { category, minPrice, maxPrice } = req.query;
-  
+  const { category, minPrice, maxPrice, search, lat, lng, radius } = req.query;
+
   let query = { isAvailable: true }; // Only show available properties by default
 
   if (category) {
@@ -18,9 +18,43 @@ const getProperties = asyncHandler(async (req, res) => {
     if (maxPrice) query.rentPrice.$lte = Number(maxPrice);
   }
 
+  // 3. Text Search (Matches address, name, or description)
+  if (search) {
+    query.$or = [
+      { address: { $regex: search, $options: "i" } },
+      { name: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } }
+    ];
+  }
+
+  // 4. Location Radius Filter (Approximate Bounding Box)
+  if (lat && lng && radius) {
+    const r = Number(radius);
+    const latNum = Number(lat);
+    const lngNum = Number(lng);
+    
+    // 1 degree latitude ~= 111 km
+    const latDelta = r / 111;
+    // 1 degree longitude ~= 111 * cos(latitude) km
+    const lngDelta = r / (111 * Math.cos(latNum * (Math.PI / 180)));
+
+    query["location.lat"] = { $gte: latNum - latDelta, $lte: latNum + latDelta };
+    query["location.lng"] = { $gte: lngNum - lngDelta, $lte: lngNum + lngDelta };
+  }
+
   // Populate owner details so the frontend can display contact info
   const properties = await Property.find(query).populate("ownerId", "name email phone");
-  res.json(properties);
+
+  // Strip phone from owner if showPhone is false
+  const results = properties.map((p) => {
+    const obj = p.toObject();
+    if (!obj.showPhone && obj.ownerId) {
+      delete obj.ownerId.phone;
+    }
+    return obj;
+  });
+
+  res.json(results);
 });
 
 // @desc    Get single property
@@ -41,8 +75,14 @@ const getPropertyById = asyncHandler(async (req, res) => {
       throw new Error("Property not found or is no longer available");
     }
   }
+  // Strip phone from owner data if showPhone is false and viewer is not the owner
+  const result = property.toObject();
+  const isOwnerViewing = req.user && property.ownerId._id.toString() === req.user._id.toString();
+  if (!result.showPhone && !isOwnerViewing && result.ownerId) {
+    delete result.ownerId.phone;
+  }
 
-  res.json(property);
+  res.json(result);
 });
 
 // @desc    Create a property
@@ -56,9 +96,9 @@ const createProperty = asyncHandler(async (req, res) => {
 
   // Basic required fields check
   if (
-    !category || !address || !holdingNo || !area || !rentPrice || 
-    storey === undefined || elevator === undefined || 
-    !location || !location.lat || !location.lng || 
+    !category || !address || !holdingNo || !area || !rentPrice ||
+    storey === undefined || elevator === undefined ||
+    !location || !location.lat || !location.lng ||
     !images || images.length === 0
   ) {
     res.status(400);
@@ -80,7 +120,8 @@ const createProperty = asyncHandler(async (req, res) => {
   const property = new Property({
     ownerId: req.user._id, // Set automatically from the auth token
     category, address, holdingNo, area, rentPrice, salePrice, location,
-    images, description, name, storey, position, elevator, bedroom, bathroom, balcony
+    images, description, name, storey, position, elevator, bedroom, bathroom, balcony,
+    showPhone: req.body.showPhone || false,
   });
 
   const createdProperty = await property.save();
@@ -137,6 +178,7 @@ const updateProperty = asyncHandler(async (req, res) => {
   property.bathroom = bathroom || property.bathroom;
   property.balcony = balcony || property.balcony;
   property.isAvailable = isAvailable !== undefined ? isAvailable : property.isAvailable;
+  property.showPhone = req.body.showPhone !== undefined ? req.body.showPhone : property.showPhone;
 
   const updatedProperty = await property.save();
   res.json(updatedProperty);

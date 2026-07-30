@@ -1,38 +1,32 @@
 # RentX — System Architecture
 
-This document is the single source of truth for how the project is structured. Follow it
-consistently so the codebase stays simple, modular, and easy to reason about. Update this
-file whenever an architectural decision changes.
+This document is the single source of truth for how the project is structured. Follow it consistently so the codebase stays simple, modular, and easy to reason about. Update this file whenever an architectural decision changes.
 
 ---
 
 ## 1. Project Overview
 
-RentX is a platform where property owners list places for rent/sale (houses, offices,
-commercial spaces, godowns, garages, ATM booths), tenants browse and request to rent them,
-and companies offer supporting services (moving, cleaning, electrician, plumbing, painting).
+RentX is a platform where property owners list places for rent/sale (houses, offices, commercial spaces, godowns, garages, ATM booths), tenants browse and request to rent them, and companies offer supporting services (moving, cleaning, electrician, plumbing, painting).
 
 **User roles:**
 
 | Role   | Can do |
 |--------|--------|
-| Admin   | Manage users, approve/remove listings, oversee the platform |
+| Admin   | Manage users, approve/remove listings, review property reports, oversee platform |
 | Owner   | Create/edit/delete property listings, respond to rental requests |
-| Tenant  | Browse listings, request to rent, book services |
-| Company | List services offered, respond to service requests, set rates |
+| Tenant  | Browse listings, request to rent, book services, report fake properties |
+| Company | List services offered, quote service requests, update job statuses |
 
 ---
 
 ## 2. Tech Stack
 
-Keep the stack minimal — no tool is added unless it's needed.
-
 - **Backend:** Node.js + Express
 - **Database:** MongoDB + Mongoose
-- **Auth:** JWT (access token), bcrypt for password hashing
+- **Auth:** Firebase Authentication (handles emails, passwords, and issues ID tokens). The backend uses `firebase-admin` to verify tokens. No passwords are ever stored in MongoDB.
 - **File/image storage:** Cloud storage bucket (e.g. Cloudinary) — store only the URL in Mongo
-- **Frontend:** React (separate app, consumes the REST API below)
-- **Maps:** Google Maps / Mapbox API on the frontend, using `location` (lat/lng) stored per property
+- **Frontend:** React (consumes the REST API)
+- **Maps:** React-Leaflet on the frontend, using `location` (lat/lng) stored per property. Advanced geospatial radius searches happen via backend calculations.
 
 ---
 
@@ -44,6 +38,7 @@ Standard MVC-style layout. One responsibility per file.
 /config
   db.js               → mongoose connection setup
   env.js              → loads/validates environment variables
+  firebase.js         → initializes firebase-admin SDK
 
 /models
   userModel.js
@@ -51,38 +46,26 @@ Standard MVC-style layout. One responsibility per file.
   companyProfileModel.js
   rentalRequestModel.js
   serviceRequestModel.js
+  reportModel.js
+  notificationModel.js
 
 /routes
-  userRoutes.js
-  authRoutes.js
-  propertyRoutes.js
-  companyRoutes.js
-  rentalRequestRoutes.js
-  serviceRequestRoutes.js
+  (One for each resource, e.g., userRoutes.js, propertyRoutes.js, etc.)
 
 /controllers
-  userController.js
-  authController.js
-  propertyController.js
-  companyController.js
-  rentalRequestController.js
-  serviceRequestController.js
+  (One for each resource, handling business logic and Mongoose queries)
 
 /middleware
-  authMiddleware.js   → verifies JWT, attaches req.user
+  authMiddleware.js   → verifies Firebase ID token, attaches req.user
   roleMiddleware.js   → restricts route to specific roles (e.g. "owner", "admin")
   errorMiddleware.js  → central error handler
 
 /utils
-  costCalculator.js   → shared logic for service cost estimates
-  asyncHandler.js      → wraps async route handlers to avoid repeated try/catch
+  asyncHandler.js     → wraps async route handlers to avoid repeated try/catch
+  notify.js           → creates in-app Notification records in MongoDB for system alerts
 
 server.js             → app entry point
 ```
-
-**Rule of thumb:** Routes only wire up HTTP methods to controller functions. Controllers
-hold the logic. Models only define schema/data shape. No business logic inside models or
-routes.
 
 ---
 
@@ -90,15 +73,15 @@ routes.
 
 ### 4.1 User (`userModel.js`)
 
-Extends the existing schema with a password field and a `company` role, since Company is a
-user type in this system too.
+Authentication is handled entirely by Firebase, so there is no `password` field in our database. We map the `firebaseUid` to our MongoDB document.
 
 ```js
 {
+  firebaseUid: { type: String, required: true, unique: true },
   name:     { type: String, required: true },
   email:    { type: String, required: true, unique: true },
-  password: { type: String, required: true },       // bcrypt-hashed, never returned in responses
-  phone:    { type: String, required: true },
+  phone:    { type: String, required: true }, // Must be 11-digit BD number
+  address:  { type: String, required: true },
   role: {
     type: String,
     required: true,
@@ -109,55 +92,41 @@ user type in this system too.
 }
 ```
 
-A `company` user gets an associated `CompanyProfile` document (below) rather than cramming
-service-specific fields into the User model itself.
-
-### 4.2 Property (renamed from `Flat` → `Property`)
-
-The current `flatModel.js` only covers houses/apartments. Broaden `type` to cover every
-listing category from the notes, and add the fields called out as universal (sale price,
-GPS location) or category-specific (elevator).
+### 4.2 Property (`propertyModel.js`)
 
 ```js
 {
   ownerId:   { type: ObjectId, ref: "User", required: true },
-
   category: {
-    type: String,
-    required: true,
+    type: String, required: true,
     enum: ["house", "office", "commercial_space", "godown", "garage", "atm_booth"],
   },
-
   address:  { type: String, required: true },
   holdingNo:{ type: String, required: true },
   area:     { type: Number, required: true },
-
-  rentPrice: { type: Number, required: true },
-  salePrice: { type: Number, required: false }, // only if the owner also allows sale
-
+  rentPrice:{ type: Number, required: true },
+  salePrice:{ type: Number, required: false },
   location: {
     lat: { type: Number, required: true },
     lng: { type: Number, required: true },
   },
-
   images:      [{ type: String, required: true }],
   description: { type: String },
   isAvailable: { type: Boolean, required: true, default: true },
+  
+  // Privacy feature: if false, owner phone is stripped from public API response
+  showPhone:   { type: Boolean, default: false }, 
 
-  // Optional / category-dependent — not every category needs every field
-  name:     { type: String },              // e.g. building name
-  storey:   { type: Number },
+  // Category-dependent Fields
+  name:     { type: String },              
+  storey:   { type: Number, required: true },
+  elevator: { type: Boolean, required: true, default: false },
   position: { type: String },
-  elevator: { type: Boolean, default: false },
   bedroom:  { type: Number },
   bathroom: { type: Number },
   balcony:  { type: Number },
 }
 ```
-
-Keep category-specific validation (e.g. "bedroom is required if category is house") inside
-the **controller**, not the schema — this keeps the schema simple and avoids Mongoose
-conditional-required complexity.
 
 ### 4.3 CompanyProfile (`companyProfileModel.js`)
 
@@ -169,17 +138,12 @@ conditional-required complexity.
     type: String,
     enum: ["moving", "cleaning", "electrician", "plumbing", "painting"],
   }],
-  baseRates: {
-    type: Map,
-    of: Number, // e.g. { moving: 500, cleaning: 200 }
-  },
+  baseRates: { type: Map, of: Number },
   description: { type: String },
 }
 ```
 
 ### 4.4 RentalRequest (`rentalRequestModel.js`)
-
-Tenant → Owner request to rent a listed property.
 
 ```js
 {
@@ -197,118 +161,132 @@ Tenant → Owner request to rent a listed property.
 
 ### 4.5 ServiceRequest (`serviceRequestModel.js`)
 
-Tenant/Owner → Company request for moving, cleaning, etc. Matches the fields already
-sketched in the notes for moving/cleaning.
+Supports a manual quotation workflow and highly detailed moving/cleaning parameters.
 
 ```js
 {
   requesterId: { type: ObjectId, ref: "User", required: true },
-  companyId:   { type: ObjectId, ref: "User", required: true }, // must have role "company"
-  serviceType: {
-    type: String,
-    enum: ["moving", "cleaning", "electrician", "plumbing", "painting"],
-    required: true,
-  },
+  companyId:   { type: ObjectId, ref: "CompanyProfile", required: true },
+  serviceType: { type: String, enum: ["moving", "cleaning", ...], required: true },
 
-  fromAddress: { type: String },   // moving only
-  toAddress:   { type: String },   // moving only
+  // Moving specifics
+  fromAddress: { type: String },
+  toAddress:   { type: String },
+  furnitureItems: [{ 
+    name: String, 
+    estimatedMassKg: Number, 
+    size: String, // small/medium/large/oversized
+    requiresStairs: Boolean, // if true, item is too big for elevator
+    specialCare: Boolean 
+  }],
+  storey: { type: Number },
+  elevatorAvailable: { type: Boolean, default: false },
+
+  // Cleaning specifics
+  numberOfRooms: { type: Number },
+  spaceArea: { type: Number },
+
   scheduledDate: { type: Date, required: true },
+  specialNote: { type: String },
 
-  rooms:              { type: Number },
-  storey:             { type: Number },
-  elevatorAvailable:  { type: Boolean, default: false },
-  specialCareItems:   [{ type: String }],
-  specialNote:        { type: String },
+  // Company response
+  estimatedCost: { type: Number }, // Quoted by company based on params above
+  companyNote: { type: String },
 
-  estimatedCost: { type: Number }, // from utils/costCalculator.js
   status: {
     type: String,
-    enum: ["pending", "confirmed", "completed", "cancelled"],
+    enum: ["pending", "quoted", "accepted", "in_progress", "completed", "cancelled"],
     default: "pending",
   },
 }
 ```
 
-All models use `{ timestamps: true }`, matching the existing convention.
+### 4.6 Report (`reportModel.js`)
+
+Allows users to flag fake/suspicious properties.
+
+```js
+{
+  propertyId: { type: ObjectId, ref: "Property", required: true },
+  reportedBy: { type: ObjectId, ref: "User", required: true },
+  reason:     { type: String, required: true },
+  status: {
+    type: String,
+    enum: ["pending", "reviewed", "dismissed", "action_taken"],
+    default: "pending",
+  },
+  adminNote: { type: String },
+}
+```
+
+### 4.7 Notification (`notificationModel.js`)
+
+In-app notifications stored in the database for the dashboard notification bell.
+
+```js
+{
+  userId: { type: ObjectId, ref: "User", required: true },
+  title: { type: String, required: true },
+  message: { type: String, required: true },
+  isRead: { type: Boolean, default: false },
+  type: { type: String, enum: ["system", "rental_request", "service_request", "report"] },
+  relatedId: { type: ObjectId },
+}
+```
 
 ---
 
 ## 5. API Routes
 
-REST, resource-based, one router file per resource. All non-public routes go through
-`authMiddleware`; role-restricted ones also go through `roleMiddleware`.
-
 ```
-POST   /api/auth/register        Public
-POST   /api/auth/login           Public
+POST   /api/auth/sync                 Protected   Sync Firebase user with MongoDB
 
-GET    /api/users                Admin
-GET    /api/users/:id            Logged-in user (self) or Admin
-PUT    /api/users/:id            Logged-in user (self) or Admin
+GET    /api/users                     Admin       List all users
+GET    /api/users/:id                 Self/Admin  Get profile
+PUT    /api/users/:id                 Self/Admin  Update profile
 
-GET    /api/properties           Public (browse/search/filter)
-GET    /api/properties/:id       Public
-POST   /api/properties           Owner
-PUT    /api/properties/:id       Owner (own listing only)
-DELETE /api/properties/:id       Owner (own listing only) or Admin
+GET    /api/properties                Public      Browse (supports search, lat, lng, radius filters)
+GET    /api/properties/:id            Public*     View single (*protectOptional hides unavailable)
+POST   /api/properties                Owner       Create listing
+PUT    /api/properties/:id            Owner       Update own listing
+DELETE /api/properties/:id            Owner/Admin Delete listing
 
-GET    /api/companies            Public (browse companies by service type)
-POST   /api/companies            Company (create own profile)
-PUT    /api/companies/:id        Company (own profile only)
+GET    /api/companies                 Public      Browse companies
+GET    /api/companies/:id             Public      View company
+POST   /api/companies                 Company     Create profile
+PUT    /api/companies/:id             Company     Update own profile
 
-POST   /api/rental-requests           Tenant
-GET    /api/rental-requests/my        Tenant or Owner (their own requests)
-PUT    /api/rental-requests/:id       Owner (approve/reject)
+POST   /api/rental-requests           Tenant      Request to rent
+GET    /api/rental-requests/my        All         View own requests
+PUT    /api/rental-requests/:id       All         Approve/reject/cancel
 
-POST   /api/service-requests          Tenant or Owner
-GET    /api/service-requests/my       Requester or Company
-PUT    /api/service-requests/:id      Company (confirm/complete) or requester (cancel)
+POST   /api/service-requests          All         Create service request
+GET    /api/service-requests/my       All         View own requests
+PUT    /api/service-requests/:id      All         Quote/accept/complete/cancel
+
+POST   /api/reports                   Any User    Report a property
+GET    /api/reports                   Admin       View reports
+PUT    /api/reports/:id               Admin       Update report status
+
+GET    /api/notifications             All         View my notifications
+PUT    /api/notifications/read-all    All         Mark all as read
+PUT    /api/notifications/:id/read    All         Mark single as read
 ```
 
 ---
 
-## 6. Auth & Authorization
+## 6. Auth & Authorization (Firebase)
 
-- `POST /api/auth/login` issues a JWT containing `{ id, role }`.
-- `authMiddleware` verifies the token and attaches `req.user`.
-- `roleMiddleware(["owner", "admin"])` checks `req.user.role` against an allowed list and
-  rejects with `403` otherwise.
-- Ownership checks (e.g. "can only edit your own listing") happen inside the controller by
-  comparing `req.user.id` to the document's `ownerId`/`requesterId`.
+- **Login/Registration:** Handled entirely by the Firebase Client SDK on the frontend.
+- **Token Verification:** The frontend passes the Firebase ID Token in the `Authorization: Bearer <token>` header. `authMiddleware` uses `firebase-admin` to decode this token and attaches the user document to `req.user`.
+- **Syncing:** `POST /api/auth/sync` is called immediately after Firebase login/registration. It maps the Firebase UID to a MongoDB User. **Crucially, if MongoDB validation fails during first-time sync, the backend automatically executes `auth.deleteUser(uid)` to delete the Firebase user. This prevents "ghost accounts" from bricking the system.**
+- **Roles:** `roleMiddleware(["owner", "admin"])` checks `req.user.role` against an allowed list and rejects with `403` otherwise.
 
 ---
 
 ## 7. Coding Conventions
 
 - One model = one file. One router = one file. No mixing.
-- Controllers return `res.status(code).json({...})`; never let raw Mongoose errors leak to
-  the client — always pass through `errorMiddleware`.
+- Controllers return `res.status(code).json({...})`; never let raw Mongoose errors leak to the client — always pass through `errorMiddleware`.
 - Use `asyncHandler` to wrap controller functions instead of repeating `try/catch` everywhere.
-- Keep validation logic in controllers, not scattered across routes.
-- Environment variables (DB URI, JWT secret, cloud storage keys) always go through `config/env.js`,
-  never hardcoded.
-- Favor small, named functions over large inline logic blocks.
-
----
-
-## 8. Planned Features (not yet built, keep architecture room for these)
-
-- **Real-time map** — frontend consumes `location` field on `Property` to render pins.
-- **Cost calculator** — `utils/costCalculator.js` takes serviceType + parameters (rooms,
-  distance, storey, elevator) and returns an `estimatedCost`; used by `serviceRequestController.js`.
-- **Event booking** — likely a future `EventBookingRequest` model, structurally similar to
-  `RentalRequest`.
-- **Notifications** — email/SMS on request status change; wire in as a separate `utils/notify.js`
-  rather than embedding notification logic in controllers.
-
----
-
-## 9. Migration Notes (from current code)
-
-- `models/flatModel.js` → rename to `models/propertyModel.js`; rename model name `Flat` → `Property`.
-- `type` field renamed to `category`, enum expanded to all six listing categories.
-- `userModel.js` needs a `password` field added and `"company"` added to the `role` enum
-  before auth can be implemented.
-- `userRoutes.js` currently creates users directly via `POST /api/users` with no password —
-  this should move to `POST /api/auth/register` once auth is added, with password hashing
-  via bcrypt in the controller.
+- Notifications are never hardcoded in controllers; always use `utils/notify.js` to insert alerts into the database.

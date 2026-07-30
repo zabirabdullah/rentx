@@ -7,6 +7,10 @@ import userRoutes from "./routes/userRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import propertyRoutes from "./routes/propertyRoutes.js";
 import companyRoutes from "./routes/companyRoutes.js";
+import rentalRequestRoutes from "./routes/rentalRequestRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
+import serviceRequestRoutes from "./routes/serviceRequestRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 // Connect to the database
 connectDB();
@@ -28,6 +32,10 @@ app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/properties", propertyRoutes);
 app.use("/api/companies", companyRoutes);
+app.use("/api/rental-requests", rentalRequestRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/service-requests", serviceRequestRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Central error handler — must be after all routes
 app.use(errorHandler);
