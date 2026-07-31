@@ -1,58 +1,232 @@
 import Property from "../models/propertyModel.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
-// @desc    Get all properties (with basic filtering)
-// @route   GET /api/properties
-// @access  Public
-const getProperties = asyncHandler(async (req, res) => {
-  const { category, minPrice, maxPrice, search, lat, lng, radius } = req.query;
+const allowedCategories = ["house", "office", "commercial_space", "godown", "garage", "atm_booth"];
 
-  let query = { isAvailable: true }; // Only show available properties by default
+const toNumber = (value) => {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  const numericValue = Number(value);
+  return Number.isNaN(numericValue) ? null : numericValue;
+};
+
+const normalizeLocation = ({ location, latitude, longitude, lat, lng }) => {
+  if (location && typeof location === "object") {
+    const latValue = location.lat ?? location.latitude;
+    const lngValue = location.lng ?? location.longitude;
+
+    if (latValue === undefined || lngValue === undefined) {
+      return null;
+    }
+
+    const lat = Number(latValue);
+    const lng = Number(lngValue);
+
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      return null;
+    }
+
+    return { lat, lng };
+  }
+
+  if (latitude === undefined && longitude === undefined) {
+    if (lat === undefined && lng === undefined) {
+      return null;
+    }
+
+    if (lat === undefined || lng === undefined) {
+      return null;
+    }
+
+    const numericLat = Number(lat);
+    const numericLng = Number(lng);
+
+    if (Number.isNaN(numericLat) || Number.isNaN(numericLng)) {
+      return null;
+    }
+
+    return { lat: numericLat, lng: numericLng };
+  }
+
+  if (latitude === undefined || longitude === undefined) {
+    return null;
+  }
+
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+
+  if (Number.isNaN(lat) || Number.isNaN(lng)) {
+    return null;
+  }
+
+  return { lat, lng };
+};
+
+const calculateDistanceKm = (lat1, lng1, lat2, lng2) => {
+  const earthRadiusKm = 6371;
+  const toRadians = (degrees) => (degrees * Math.PI) / 180;
+  const deltaLat = toRadians(lat2 - lat1);
+  const deltaLng = toRadians(lng2 - lng1);
+  const a =
+    Math.sin(deltaLat / 2) ** 2 +
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(deltaLng / 2) ** 2;
+
+  return 2 * earthRadiusKm * Math.asin(Math.sqrt(a));
+};
+
+const buildPropertyQuery = (queryParams, { availableOnly = true } = {}) => {
+  const { category, minPrice, maxPrice, search, lat, lng, radius } = queryParams;
+  const query = {};
+  const numericLat = toNumber(lat);
+  const numericLng = toNumber(lng);
+  const numericRadius = toNumber(radius);
+
+  if (availableOnly) {
+    query.isAvailable = true;
+  }
 
   if (category) {
     query.category = category;
   }
-  if (minPrice || maxPrice) {
+
+  if (minPrice !== undefined || maxPrice !== undefined) {
     query.rentPrice = {};
-    if (minPrice) query.rentPrice.$gte = Number(minPrice);
-    if (maxPrice) query.rentPrice.$lte = Number(maxPrice);
+    if (minPrice !== undefined) query.rentPrice.$gte = Number(minPrice);
+    if (maxPrice !== undefined) query.rentPrice.$lte = Number(maxPrice);
   }
 
-  // 3. Text Search (Matches address, name, or description)
   if (search) {
     query.$or = [
       { address: { $regex: search, $options: "i" } },
       { name: { $regex: search, $options: "i" } },
-      { description: { $regex: search, $options: "i" } }
+      { description: { $regex: search, $options: "i" } },
     ];
   }
 
-  // 4. Location Radius Filter (Approximate Bounding Box)
-  if (lat && lng && radius) {
-    const r = Number(radius);
-    const latNum = Number(lat);
-    const lngNum = Number(lng);
-    
-    // 1 degree latitude ~= 111 km
-    const latDelta = r / 111;
-    // 1 degree longitude ~= 111 * cos(latitude) km
-    const lngDelta = r / (111 * Math.cos(latNum * (Math.PI / 180)));
+  let locationFilter = null;
+  if (numericLat !== undefined || numericLng !== undefined || numericRadius !== undefined) {
+    if (numericLat === null || numericLng === null || numericRadius === null) {
+      return { query, locationFilter: { invalid: true } };
+    }
 
-    query["location.lat"] = { $gte: latNum - latDelta, $lte: latNum + latDelta };
-    query["location.lng"] = { $gte: lngNum - lngDelta, $lte: lngNum + lngDelta };
+    const latDelta = numericRadius / 111;
+    const lngDelta = numericRadius / (111 * Math.cos((numericLat * Math.PI) / 180));
+
+    query["location.lat"] = { $gte: numericLat - latDelta, $lte: numericLat + latDelta };
+    query["location.lng"] = { $gte: numericLng - lngDelta, $lte: numericLng + lngDelta };
+
+    locationFilter = {
+      lat: numericLat,
+      lng: numericLng,
+      radius: numericRadius,
+    };
+  }
+
+  return { query, locationFilter };
+};
+
+const formatProperty = (property, viewerId) => {
+  const obj = property.toObject();
+  const ownerId = obj.ownerId;
+  const isOwnerViewing = viewerId && ownerId && ownerId._id && ownerId._id.toString() === viewerId.toString();
+
+  if (!obj.showPhone && !isOwnerViewing && ownerId) {
+    delete ownerId.phone;
+  }
+
+  if (obj.location) {
+    obj.lat = obj.location.lat;
+    obj.lng = obj.location.lng;
+  }
+
+  return obj;
+};
+
+const formatMapProperty = (property, viewerId, locationFilter = null) => {
+  const obj = formatProperty(property, viewerId);
+
+  if (locationFilter && obj.location) {
+    obj.distanceKm = Number(
+      calculateDistanceKm(locationFilter.lat, locationFilter.lng, obj.location.lat, obj.location.lng).toFixed(2)
+    );
+  }
+
+  return obj;
+};
+
+// @desc    Get all properties (with basic filtering)
+// @route   GET /api/properties
+// @access  Public
+const getProperties = asyncHandler(async (req, res) => {
+  const { query, locationFilter } = buildPropertyQuery(req.query);
+
+  if (locationFilter && locationFilter.invalid) {
+    res.status(400);
+    throw new Error("Latitude, longitude, and radius must all be valid numbers");
   }
 
   // Populate owner details so the frontend can display contact info
   const properties = await Property.find(query).populate("ownerId", "name email phone");
 
   // Strip phone from owner if showPhone is false
-  const results = properties.map((p) => {
-    const obj = p.toObject();
-    if (!obj.showPhone && obj.ownerId) {
-      delete obj.ownerId.phone;
+  const results = properties.map((property) => formatProperty(property, req.user?._id));
+
+  res.json(results);
+});
+
+// @desc    Get properties for the map view
+// @route   GET /api/properties/map
+// @access  Public
+const getPropertyMap = asyncHandler(async (req, res) => {
+  const { query, locationFilter } = buildPropertyQuery(req.query);
+
+  if (locationFilter && locationFilter.invalid) {
+    res.status(400);
+    throw new Error("Latitude, longitude, and radius must all be valid numbers");
+  }
+
+  const properties = await Property.find(query)
+    .select("ownerId category address holdingNo area rentPrice salePrice location images description isAvailable showPhone name storey position elevator bedroom bathroom balcony")
+    .populate("ownerId", "name email phone");
+
+  const results = properties
+    .map((property) => formatMapProperty(property, req.user?._id, locationFilter))
+    .sort((left, right) => {
+      if (left.distanceKm === undefined || right.distanceKm === undefined) {
+        return 0;
+      }
+      return left.distanceKm - right.distanceKm;
+    });
+
+  res.json(results);
+});
+
+// @desc    Search properties by location text or coordinates
+// @route   GET /api/properties/search/location
+// @access  Public
+const searchPropertiesByLocation = asyncHandler(async (req, res) => {
+  const locationSearch = req.query.query || req.query.location || req.query.search;
+  const { query, locationFilter } = buildPropertyQuery(
+    {
+      ...req.query,
+      search: locationSearch || req.query.search,
     }
-    return obj;
-  });
+  );
+
+  if (locationFilter && locationFilter.invalid) {
+    res.status(400);
+    throw new Error("Latitude, longitude, and radius must all be valid numbers");
+  }
+
+  if (!locationSearch && !locationFilter) {
+    res.status(400);
+    throw new Error("Provide a location query or latitude, longitude, and radius");
+  }
+
+  const properties = await Property.find(query).populate("ownerId", "name email phone");
+  const results = properties.map((property) => formatMapProperty(property, req.user?._id, locationFilter));
 
   res.json(results);
 });
@@ -76,11 +250,7 @@ const getPropertyById = asyncHandler(async (req, res) => {
     }
   }
   // Strip phone from owner data if showPhone is false and viewer is not the owner
-  const result = property.toObject();
-  const isOwnerViewing = req.user && property.ownerId._id.toString() === req.user._id.toString();
-  if (!result.showPhone && !isOwnerViewing && result.ownerId) {
-    delete result.ownerId.phone;
-  }
+  const result = formatProperty(property, req.user?._id);
 
   res.json(result);
 });
@@ -91,21 +261,23 @@ const getPropertyById = asyncHandler(async (req, res) => {
 const createProperty = asyncHandler(async (req, res) => {
   const {
     category, address, holdingNo, area, rentPrice, salePrice, location,
-    images, description, name, storey, position, elevator, bedroom, bathroom, balcony
+    images, description, name, storey, position, elevator, bedroom, bathroom, balcony,
+    latitude, longitude, lat, lng,
   } = req.body;
+
+  const normalizedLocation = normalizeLocation({ location, latitude, longitude, lat, lng });
 
   // Basic required fields check
   if (
     !category || !address || !holdingNo || !area || !rentPrice ||
     storey === undefined || elevator === undefined ||
-    !location || !location.lat || !location.lng ||
+    !normalizedLocation ||
     !images || images.length === 0
   ) {
     res.status(400);
     throw new Error("Please provide all required fields (category, address, holdingNo, area, rentPrice, storey, elevator, location, images)");
   }
 
-  const allowedCategories = ["house", "office", "commercial_space", "godown", "garage", "atm_booth"];
   if (!allowedCategories.includes(category)) {
     res.status(400);
     throw new Error("Invalid category selected. No other values allowed.");
@@ -119,7 +291,7 @@ const createProperty = asyncHandler(async (req, res) => {
 
   const property = new Property({
     ownerId: req.user._id, // Set automatically from the auth token
-    category, address, holdingNo, area, rentPrice, salePrice, location,
+    category, address, holdingNo, area, rentPrice, salePrice, location: normalizedLocation,
     images, description, name, storey, position, elevator, bedroom, bathroom, balcony,
     showPhone: req.body.showPhone || false,
   });
@@ -147,8 +319,17 @@ const updateProperty = asyncHandler(async (req, res) => {
 
   const {
     category, address, holdingNo, area, rentPrice, salePrice, location,
-    images, description, name, storey, position, elevator, bedroom, bathroom, balcony, isAvailable
+    images, description, name, storey, position, elevator, bedroom, bathroom, balcony, isAvailable,
+    latitude, longitude, lat, lng,
   } = req.body;
+
+  const normalizedLocation = normalizeLocation({ location, latitude, longitude, lat, lng });
+  const hasLocationInput = location !== undefined || latitude !== undefined || longitude !== undefined || lat !== undefined || lng !== undefined;
+
+  if (hasLocationInput && !normalizedLocation) {
+    res.status(400);
+    throw new Error("Please provide a valid location with latitude and longitude");
+  }
 
   // Category validation if category is being updated
   const newCategory = category || property.category;
@@ -167,7 +348,7 @@ const updateProperty = asyncHandler(async (req, res) => {
   property.area = area || property.area;
   property.rentPrice = rentPrice || property.rentPrice;
   property.salePrice = salePrice !== undefined ? salePrice : property.salePrice;
-  property.location = location || property.location;
+  property.location = normalizedLocation || property.location;
   property.images = images || property.images;
   property.description = description || property.description;
   property.name = name || property.name;
@@ -205,4 +386,4 @@ const deleteProperty = asyncHandler(async (req, res) => {
   res.json({ message: "Property removed" });
 });
 
-export { getProperties, getPropertyById, createProperty, updateProperty, deleteProperty };
+export { getProperties, getPropertyMap, searchPropertiesByLocation, getPropertyById, createProperty, updateProperty, deleteProperty };

@@ -43,7 +43,8 @@ const updateUser = asyncHandler(async (req, res) => {
 
     user.name = req.body.name || user.name;
     user.phone = req.body.phone || user.phone;
-    
+    user.address = req.body.address || user.address;
+
     // Only admins can change a user's role
     if (req.user.role === "admin" && req.body.role) {
       user.role = req.body.role;

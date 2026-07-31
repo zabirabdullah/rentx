@@ -39,8 +39,29 @@ const propertySchema = mongoose.Schema(
     bathroom: { type: Number },
     balcony: { type: Number },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
+
+propertySchema.virtual("latitude").get(function () {
+  return this.location?.lat;
+});
+
+propertySchema.virtual("latitude").set(function (value) {
+  this.location = this.location || {};
+  this.location.lat = value;
+});
+
+propertySchema.virtual("longitude").get(function () {
+  return this.location?.lng;
+});
+
+propertySchema.virtual("longitude").set(function (value) {
+  this.location = this.location || {};
+  this.location.lng = value;
+});
+
+propertySchema.index({ "location.lat": 1, "location.lng": 1 });
+propertySchema.index({ isAvailable: 1, category: 1, rentPrice: 1 });
 
 const Property = mongoose.model("Property", propertySchema);
 export default Property;
