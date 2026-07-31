@@ -3,7 +3,7 @@ import LocationPickerMap from '../../LocationPickerMap';
 import { useUser } from '../../../context/UserContext';
 import { auth } from '../../../config/firebase';
 
-const emptyForm = { title: '', category: 'house', price: '', location: '', lat: '', lng: '', specs: '', status: 'Available' };
+const emptyForm = { title: '', category: 'house', price: '', location: '', holdingNo: '', area: '', lat: '', lng: '', specs: '', status: 'Available' };
 const categories = ['house', 'office', 'commercial_space', 'godown', "garage", "atm_booth"];
 const statusColors = { Available: 'bg-green-100 text-green-700', Unavailable: 'bg-slate-100 text-slate-600' };
 
@@ -37,10 +37,12 @@ const ManageProperties = () => {
   const openAdd = () => { setForm(emptyForm); setEditingId(null); setShowModal(true); };
   const openEdit = (p) => { 
     setForm({ 
-      title: p.title, 
+      title: p.title || p.name || '', 
       category: p.category, 
       price: p.rentPrice?.toString() || '', 
       location: p.address || '', 
+      holdingNo: p.holdingNo || '',
+      area: p.area?.toString() || '',
       lat: p.lat?.toString() || '', 
       lng: p.lng?.toString() || '', 
       specs: p.specs || '', 
@@ -76,8 +78,8 @@ const ManageProperties = () => {
         category: form.category.toLowerCase(),
         rentPrice: parseFloat(form.price),
         address: form.location,
-        holdingNo: 'N/A', // default placeholder
-        area: 'N/A', // default placeholder
+        holdingNo: form.holdingNo || 'N/A',
+        area: form.area ? parseFloat(form.area) : 0,
         storey: 1, // default
         elevator: false, // default
         lat: form.lat ? parseFloat(form.lat) : undefined,
@@ -197,6 +199,10 @@ const ManageProperties = () => {
                   </select>
                 </div>
                 <div><label className={labelClass}>Price (Monthly)</label><input required type="number" className={inputClass} value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="12000" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className={labelClass}>Holding No.</label><input required className={inputClass} value={form.holdingNo} onChange={e => setForm(f => ({ ...f, holdingNo: e.target.value }))} placeholder="e.g. 45/A" /></div>
+                <div><label className={labelClass}>Area (sqft)</label><input required type="number" className={inputClass} value={form.area} onChange={e => setForm(f => ({ ...f, area: e.target.value }))} placeholder="1200" /></div>
               </div>
               <div><label className={labelClass}>Location / Address</label><input required className={inputClass} value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="123 Main St, City" /></div>
               <div className="grid grid-cols-2 gap-4">
