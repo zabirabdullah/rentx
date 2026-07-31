@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { auth } from '../config/firebase';
+import ConfirmModal from './ConfirmModal';
 
 const roleBadge = {
   admin: 'bg-violet-100 text-violet-700',
@@ -21,6 +22,9 @@ const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Modal State
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, userId: null });
+
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -30,7 +34,6 @@ const UserManagement = () => {
         });
         if (response.ok) {
           const data = await response.json();
-          // Add default status if missing for the UI
           const usersWithStatus = data.map(u => ({ ...u, status: 'Active' }));
           setUsers(usersWithStatus);
         }
@@ -44,15 +47,22 @@ const UserManagement = () => {
   }, [user]);
 
   const handleBan = (id) => {
-    // Simple UI ban toggle for demonstration (real implementation requires backend PUT)
     setUsers(prev => prev.map(u => u._id === id ? { ...u, status: u.status === 'Banned' ? 'Active' : 'Banned' } : u));
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      setUsers(prev => prev.filter(u => u._id !== id));
-      // Missing backend DELETE call intentionally kept simple
+  const requestDelete = (id) => {
+    setConfirmModal({ isOpen: true, userId: id });
+  };
+
+  const confirmDelete = () => {
+    if (confirmModal.userId) {
+      setUsers(prev => prev.filter(u => u._id !== confirmModal.userId));
+      setConfirmModal({ isOpen: false, userId: null });
     }
+  };
+
+  const cancelDelete = () => {
+    setConfirmModal({ isOpen: false, userId: null });
   };
 
   const filtered = users.filter(u => {
@@ -136,14 +146,13 @@ const UserManagement = () => {
                   <td className="px-5 py-3.5 text-slate-500">{user.joined}</td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2">
-                      <button className="px-2.5 py-1 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">View</button>
                       <button
                         onClick={() => handleBan(user._id)}
                         className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors ${user.status === 'Banned' ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-yellow-700 bg-yellow-50 hover:bg-yellow-100'}`}
                       >
                         {user.status === 'Banned' ? 'Unban' : 'Ban'}
                       </button>
-                      <button onClick={() => handleDelete(user._id)} className="px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">Delete</button>
+                      <button onClick={() => requestDelete(user._id)} className="px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">Delete</button>
                     </div>
                   </td>
                 </tr>
@@ -151,16 +160,16 @@ const UserManagement = () => {
             </tbody>
           </table>
         </div>
-        {/* Pagination UI */}
-        <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-between text-sm text-slate-500">
-          <span>Showing {filtered.length} of {users.length} users</span>
-          <div className="flex gap-1">
-            {[1, 2, 3].map(p => (
-              <button key={p} className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${p === 1 ? 'bg-green-600 text-white' : 'hover:bg-slate-100'}`}>{p}</button>
-            ))}
-          </div>
-        </div>
       </div>
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen} 
+        title="Delete User" 
+        message="Are you sure you want to permanently delete this user? This action cannot be undone."
+        onConfirm={confirmDelete} 
+        onCancel={cancelDelete} 
+        confirmText="Delete" 
+      />
     </div>
   );
 };

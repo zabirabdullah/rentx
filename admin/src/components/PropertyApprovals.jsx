@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { auth } from '../config/firebase';
+import ConfirmModal from './ConfirmModal';
 
 const statusStyles = {
   Available: 'bg-green-100 text-green-700',
@@ -22,6 +23,9 @@ const PropertyApprovals = () => {
   const [loading, setLoading] = useState(true);
   const [modalProperty, setModalProperty] = useState(null);
 
+  // Modal State
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, propertyId: null, error: false });
+
   useEffect(() => {
     const fetchProperties = async () => {
       try {
@@ -39,23 +43,35 @@ const PropertyApprovals = () => {
     if (user) fetchProperties();
   }, [user]);
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Remove this listing permanently?')) {
+  const requestDelete = (id) => {
+    setConfirmModal({ isOpen: true, propertyId: id, error: false });
+  };
+
+  const confirmDelete = async () => {
+    if (confirmModal.propertyId) {
       try {
         const token = await auth.currentUser?.getIdToken();
-        const res = await fetch(`http://localhost:5000/api/properties/${id}`, {
+        const res = await fetch(`http://localhost:5000/api/properties/${confirmModal.propertyId}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
-          setProperties(prev => prev.filter(p => p._id !== id));
+          setProperties(prev => prev.filter(p => p._id !== confirmModal.propertyId));
+          setConfirmModal({ isOpen: false, propertyId: null, error: false });
         } else {
-          alert('Failed to delete property');
+          setConfirmModal({ isOpen: true, propertyId: null, error: true });
         }
       } catch (error) {
         console.error('Delete error', error);
+        setConfirmModal({ isOpen: true, propertyId: null, error: true });
       }
+    } else if (confirmModal.error) {
+      setConfirmModal({ isOpen: false, propertyId: null, error: false });
     }
+  };
+
+  const cancelDelete = () => {
+    setConfirmModal({ isOpen: false, propertyId: null, error: false });
   };
 
   return (
@@ -112,7 +128,7 @@ const PropertyApprovals = () => {
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2">
                       <button onClick={() => setModalProperty(prop)} className="px-2.5 py-1 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">Review</button>
-                      <button onClick={() => handleDelete(prop._id)} className="px-2.5 py-1 text-xs font-medium text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">Remove</button>
+                      <button onClick={() => requestDelete(prop._id)} className="px-2.5 py-1 text-xs font-medium text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">Remove</button>
                     </div>
                   </td>
                 </tr>
@@ -120,21 +136,12 @@ const PropertyApprovals = () => {
             </tbody>
           </table>
         </div>
-        {/* Pagination */}
-        <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-between text-sm text-slate-500">
-          <span>Showing {properties.length} listings</span>
-          <div className="flex gap-1">
-            {[1, 2].map(p => (
-              <button key={p} className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${p === 1 ? 'bg-green-600 text-white' : 'hover:bg-slate-100'}`}>{p}</button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Review Modal */}
       {modalProperty && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 zoom-in-95">
             <div className="flex items-start justify-between mb-4">
               <h2 className="text-lg font-bold text-slate-900">Listing Review</h2>
               <button onClick={() => setModalProperty(null)} className="text-slate-400 hover:text-slate-700 transition-colors">
@@ -161,6 +168,26 @@ const PropertyApprovals = () => {
           </div>
         </div>
       )}
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen && !confirmModal.error} 
+        title="Remove Listing" 
+        message="Are you sure you want to permanently remove this property listing? This action cannot be undone."
+        onConfirm={confirmDelete} 
+        onCancel={cancelDelete} 
+        confirmText="Remove" 
+      />
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen && confirmModal.error} 
+        title="Error" 
+        message="Failed to delete property. Please try again later."
+        onConfirm={confirmDelete} 
+        onCancel={cancelDelete} 
+        confirmText="Okay" 
+        isDanger={false}
+      />
     </div>
   );
 };

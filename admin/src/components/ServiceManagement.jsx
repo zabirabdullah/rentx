@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { auth } from '../config/firebase';
+import ConfirmModal from './ConfirmModal';
 
 const categoryColors = {
   cleaning: 'bg-sky-100 text-sky-700',
@@ -19,6 +20,9 @@ const ServiceManagement = () => {
   const { user } = useAuth();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Modal State
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, serviceId: null });
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -42,10 +46,19 @@ const ServiceManagement = () => {
     setServices(prev => prev.map(s => s._id === id ? { ...s, status: s.status === 'Suspended' ? 'Active' : 'Suspended' } : s));
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('Delete this service permanently?')) {
-      setServices(prev => prev.filter(s => s._id !== id));
+  const requestDelete = (id) => {
+    setConfirmModal({ isOpen: true, serviceId: id });
+  };
+
+  const confirmDelete = () => {
+    if (confirmModal.serviceId) {
+      setServices(prev => prev.filter(s => s._id !== confirmModal.serviceId));
+      setConfirmModal({ isOpen: false, serviceId: null });
     }
+  };
+
+  const cancelDelete = () => {
+    setConfirmModal({ isOpen: false, serviceId: null });
   };
 
   return (
@@ -106,7 +119,7 @@ const ServiceManagement = () => {
                       >
                         {svc.status === 'Suspended' ? 'Reactivate' : 'Suspend'}
                       </button>
-                      <button onClick={() => handleDelete(svc._id)} className="px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">Delete</button>
+                      <button onClick={() => requestDelete(svc._id)} className="px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">Delete</button>
                     </div>
                   </td>
                 </tr>
@@ -114,16 +127,16 @@ const ServiceManagement = () => {
             </tbody>
           </table>
         </div>
-        {/* Pagination */}
-        <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-between text-sm text-slate-500">
-          <span>Showing {services.length} services</span>
-          <div className="flex gap-1">
-            {[1, 2].map(p => (
-              <button key={p} className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${p === 1 ? 'bg-green-600 text-white' : 'hover:bg-slate-100'}`}>{p}</button>
-            ))}
-          </div>
-        </div>
       </div>
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen} 
+        title="Delete Service" 
+        message="Are you sure you want to permanently delete this service? This action cannot be undone."
+        onConfirm={confirmDelete} 
+        onCancel={cancelDelete} 
+        confirmText="Delete" 
+      />
     </div>
   );
 };
