@@ -29,6 +29,7 @@ const propertySchema = mongoose.Schema(
     images: [{ type: String, required: true }],
     description: { type: String },
     isAvailable: { type: Boolean, required: true, default: true },
+    availableFrom: { type: Date }, // Optional: date when property becomes available
 
     // Optional / category-dependent — not every category needs every field
     name: { type: String }, // e.g. building name
@@ -41,6 +42,10 @@ const propertySchema = mongoose.Schema(
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
+
+propertySchema.virtual("mainImage").get(function () {
+  return this.images && this.images.length > 0 ? this.images[0] : null;
+});
 
 propertySchema.virtual("latitude").get(function () {
   return this.location?.lat;

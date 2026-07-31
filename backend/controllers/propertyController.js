@@ -217,7 +217,7 @@ const getPropertyById = asyncHandler(async (req, res) => {
 const createProperty = asyncHandler(async (req, res) => {
   const {
     category, address, holdingNo, area, rentPrice, salePrice, location,
-    images, description, name, storey, position, elevator, bedroom, bathroom, balcony,
+    images, description, name, storey, position, elevator, bedroom, bathroom, balcony, availableFrom,
     latitude, longitude, lat, lng,
   } = req.body;
 
@@ -248,7 +248,7 @@ const createProperty = asyncHandler(async (req, res) => {
   const property = new Property({
     ownerId: req.user._id, // Set automatically from the auth token
     category, address, holdingNo, area, rentPrice, salePrice, location: normalizedLocation,
-    images, description, name, storey, position, elevator, bedroom, bathroom, balcony,
+    images, description, name, storey, position, elevator, bedroom, bathroom, balcony, availableFrom,
     showPhone: req.body.showPhone || false,
   });
 
@@ -275,7 +275,7 @@ const updateProperty = asyncHandler(async (req, res) => {
 
   const {
     category, address, holdingNo, area, rentPrice, salePrice, location,
-    images, description, name, storey, position, elevator, bedroom, bathroom, balcony, isAvailable,
+    images, description, name, storey, position, elevator, bedroom, bathroom, balcony, isAvailable, availableFrom,
     latitude, longitude, lat, lng,
   } = req.body;
 
@@ -315,6 +315,7 @@ const updateProperty = asyncHandler(async (req, res) => {
   property.bathroom = bathroom || property.bathroom;
   property.balcony = balcony || property.balcony;
   property.isAvailable = isAvailable !== undefined ? isAvailable : property.isAvailable;
+  property.availableFrom = availableFrom !== undefined ? availableFrom : property.availableFrom;
   property.showPhone = req.body.showPhone !== undefined ? req.body.showPhone : property.showPhone;
 
   const updatedProperty = await property.save();
