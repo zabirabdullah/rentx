@@ -10,7 +10,7 @@ import { authorize } from "../middleware/roleMiddleware.js";
 const router = express.Router();
 
 // @route   POST /api/rental-requests
-router.post("/", protect, authorize(["tenant"]), createRequest);
+router.post("/", protect, createRequest);
 
 // @route   GET /api/rental-requests/my
 router.get("/my", protect, authorize(["tenant", "owner", "admin"]), getMyRequests);

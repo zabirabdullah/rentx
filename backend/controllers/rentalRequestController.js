@@ -7,7 +7,7 @@ import notify from "../utils/notify.js";
 // @route   POST /api/rental-requests
 // @access  Private/Tenant
 const createRequest = asyncHandler(async (req, res) => {
-  const { propertyId, message } = req.body;
+  const { propertyId, message, tenantNote } = req.body;
 
   if (!propertyId) {
     res.status(400);
@@ -46,7 +46,8 @@ const createRequest = asyncHandler(async (req, res) => {
     propertyId,
     tenantId: req.user._id,
     ownerId: property.ownerId,
-    message,
+    message: message || tenantNote || "",
+    tenantNote: tenantNote || message || "",
   });
 
   res.status(201).json(rentalRequest);
@@ -81,7 +82,7 @@ const getMyRequests = asyncHandler(async (req, res) => {
 // @route   PUT /api/rental-requests/:id
 // @access  Private (Owner or Tenant)
 const updateRequestStatus = asyncHandler(async (req, res) => {
-  const { status } = req.body;
+  const { status, ownerNote, tenantNote } = req.body;
   const request = await RentalRequest.findById(req.params.id);
 
   if (!request) {
@@ -98,26 +99,64 @@ const updateRequestStatus = asyncHandler(async (req, res) => {
   }
 
   // Validate allowed status transitions
-  if (isOwner) {
-    if (!["approved", "rejected"].includes(status)) {
-      res.status(400);
-      throw new Error("Owner can only approve or reject a request");
+  if (request.status === "pending") {
+    if (isOwner) {
+      if (!["approved", "rejected"].includes(status)) {
+        res.status(400);
+        throw new Error("Owner can only approve or reject a pending request");
+      }
+    } else if (isTenant) {
+      if (status !== "cancelled") {
+        res.status(400);
+        throw new Error("Tenant can only cancel a pending request");
+      }
     }
-  } else if (isTenant) {
-    if (status !== "cancelled") {
-      res.status(400);
-      throw new Error("Tenant can only cancel their own request");
+  } else if (request.status === "approved") {
+    if (isOwner) {
+      if (!["completed", "cancelled"].includes(status)) {
+        res.status(400);
+        throw new Error("Owner can only end or cancel an approved lease");
+      }
+    } else if (isTenant) {
+      if (status !== "cancelled") {
+        res.status(400);
+        throw new Error("Tenant can only cancel an approved lease");
+      }
     }
-  }
-
-  // Only allow updates on pending requests
-  if (request.status !== "pending") {
+  } else {
     res.status(400);
     throw new Error(`Cannot update a request that is already ${request.status}`);
   }
 
+  const previousStatus = request.status;
   request.status = status;
+  if (isOwner && ownerNote) request.ownerNote = ownerNote;
+  if (isTenant && tenantNote) request.tenantNote = tenantNote;
+
   const updatedRequest = await request.save();
+
+  // If approved, make property unavailable and reject other pending requests
+  if (status === "approved" && previousStatus !== "approved") {
+    const property = await Property.findById(request.propertyId);
+    if (property) {
+      property.isAvailable = false;
+      await property.save();
+
+      await RentalRequest.updateMany(
+        { propertyId: request.propertyId, status: "pending", _id: { $ne: request._id } },
+        { status: "rejected", ownerNote: "Property has been rented out to someone else." }
+      );
+    }
+  }
+
+  // If lease ended/cancelled after being approved, make property available again!
+  if (previousStatus === "approved" && ["completed", "cancelled"].includes(status)) {
+    const property = await Property.findById(request.propertyId);
+    if (property) {
+      property.isAvailable = true;
+      await property.save();
+    }
+  }
 
   // Trigger Notification to Tenant
   const property = await Property.findById(request.propertyId).select("address");

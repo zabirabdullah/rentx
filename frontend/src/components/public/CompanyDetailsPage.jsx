@@ -1,26 +1,35 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import Navbar from '../Navbar';
 import Footer from '../Footer';
 
-const mockCompanies = [
-  { id: 1, name: 'CleanPro Services', services: ['cleaning'], rating: '4.8', jobsCompleted: 142, image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1200&q=80', description: 'Professional deep cleaning and sanitization services.', rates: { 'Basic Cleaning': '$50/hr', 'Deep Cleaning': '$80/hr' } },
-  { id: 2, name: 'Swift Movers', services: ['moving'], rating: '4.9', jobsCompleted: 315, image: 'https://images.unsplash.com/photo-1600518464441-9154a4dea21b?auto=format&fit=crop&w=1200&q=80', description: 'Reliable moving and packing for residential and commercial spaces.', rates: { 'Local Move': '$100/hr', 'Interstate Move': 'Custom Quote' } },
-  // fallback for other ids
-];
-
 const CompanyDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useUser();
-  
-  const company = mockCompanies.find(c => c.id === parseInt(id)) || {
-    ...mockCompanies[0],
-    id: parseInt(id),
-    name: 'Generic Company',
-    image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=1200&q=80'
-  };
+  const [company, setCompany] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCompany = async () => {
+      try {
+        const res = await fetch(`http://localhost:5000/api/companies/${id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setCompany(data);
+        }
+      } catch (err) {
+        console.error('Error fetching company:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCompany();
+  }, [id]);
+
+  if (loading) return <div className="text-center py-20 text-slate-500">Loading company details...</div>;
+  if (!company) return <div className="text-center py-20 text-red-500">Company not found.</div>;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -32,17 +41,17 @@ const CompanyDetailsPage = () => {
           <div className="mb-6 text-sm">
             <Link to="/companies" className="text-green-600 hover:underline">Companies</Link>
             <span className="text-slate-400 mx-2">/</span>
-            <span className="text-slate-600">{company.name}</span>
+            <span className="text-slate-600">{company.businessName}</span>
           </div>
 
           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-            <div className="h-[300px] w-full relative bg-slate-800">
-              <img src={company.image} alt={company.name} className="w-full h-full object-cover opacity-80 mix-blend-overlay" />
+            <div className="h-[300px] w-full relative bg-slate-800 flex items-center justify-center">
+              <span className="text-8xl opacity-20 mix-blend-overlay">🏢</span>
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-8 md:p-12">
                 <div className="text-white">
-                  <h1 className="text-4xl font-extrabold mb-3">{company.name}</h1>
+                  <h1 className="text-4xl font-extrabold mb-3">{company.businessName}</h1>
                   <div className="flex flex-wrap gap-3">
-                    {company.services.map(s => (
+                    {company.servicesOffered?.map(s => (
                       <span key={s} className="bg-green-500/20 backdrop-blur-md text-green-300 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border border-green-500/30">
                         {s}
                       </span>
@@ -56,17 +65,25 @@ const CompanyDetailsPage = () => {
               <div className="flex-1">
                 <h2 className="text-2xl font-bold text-slate-900 mb-4">About Us</h2>
                 <p className="text-slate-600 leading-relaxed mb-8">
-                  {company.description} With years of experience and a commitment to excellence, we ensure the highest quality of service for every job we undertake.
+                  {company.description || "No description provided."}
                 </p>
 
                 <h2 className="text-xl font-bold text-slate-900 mb-4">Base Rates</h2>
                 <div className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden">
-                  {Object.entries(company.rates || {}).map(([service, rate], index) => (
-                    <div key={index} className="flex justify-between items-center p-4 border-b border-slate-100 last:border-0">
-                      <span className="font-semibold text-slate-700">{service}</span>
-                      <span className="font-bold text-green-600">{rate}</span>
-                    </div>
-                  ))}
+                  {company.baseRates && Object.keys(company.baseRates).length > 0 ? (
+                    Object.entries(company.baseRates).map(([service, rate], index) => (
+                      <div key={index} className="flex justify-between items-center p-4 border-b border-slate-100 last:border-0 capitalize">
+                        <span className="font-semibold text-slate-700">{service.replace('_', ' ')}</span>
+                        <span className="font-bold text-green-600">
+                          {rate !== '' && rate !== null && rate !== undefined && Number(rate) > 0 
+                            ? `৳${rate}` 
+                            : 'Custom Quote / On Request'}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-slate-500">No rates specified. Contact for quote.</div>
+                  )}
                 </div>
               </div>
 
@@ -75,18 +92,18 @@ const CompanyDetailsPage = () => {
                   <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
                     <div className="text-center flex-1 border-r border-slate-100">
                       <div className="text-2xl font-black text-slate-900 flex items-center justify-center gap-1">
-                        <span className="text-yellow-400">★</span> {company.rating}
+                        <span className="text-yellow-400">★</span> 5.0
                       </div>
                       <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mt-1">Rating</div>
                     </div>
                     <div className="text-center flex-1">
-                      <div className="text-2xl font-black text-slate-900">{company.jobsCompleted}</div>
-                      <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mt-1">Jobs</div>
+                      <div className="text-2xl font-black text-slate-900 text-green-600">✓</div>
+                      <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mt-1">Verified</div>
                     </div>
                   </div>
                   
                   <button 
-                    onClick={() => user ? navigate(`/request-service/${company.id}`) : navigate('/login')}
+                    onClick={() => user ? navigate(`/request-service/${company._id}`) : navigate('/login')}
                     className="block text-center w-full bg-green-600 hover:bg-green-700 text-white py-3.5 px-4 rounded-xl font-bold transition-all shadow-md hover:shadow-lg"
                   >
                     Request Service

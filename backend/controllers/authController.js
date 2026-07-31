@@ -1,4 +1,5 @@
 import User from "../models/userModel.js";
+import CompanyProfile from "../models/companyProfileModel.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { auth } from "../config/firebase.js";
 
@@ -20,14 +21,13 @@ const syncUser = asyncHandler(async (req, res) => {
     }
   };
 
-  // If user doesn't exist in Mongo, create them
+  // If user doesn't exist in Mongo
   if (!user) {
-    // If they are missing fields, they either sent a bad registration request OR they are trying 
-    // to log in to a "ghost" Firebase account that never finished syncing to MongoDB.
+    // If registration details are NOT provided (e.g. auto-sync check on auth change during registration),
+    // do NOT delete the Firebase user! Just return 404 so caller knows profile is pending creation.
     if (!name || !phone || !address || !role) {
-      await rollbackFirebaseUser();
-      res.status(400);
-      throw new Error("Incomplete registration detected. Your account has been reset. Please register again.");
+      res.status(404);
+      throw new Error("User profile not found in database. Registration incomplete.");
     }
 
     // Validate Bangladeshi phone number (11 digits starting with 01)
@@ -55,10 +55,25 @@ const syncUser = asyncHandler(async (req, res) => {
         address,
         role,
       });
+
+      // If user registered as a company, auto-initialize their CompanyProfile
+      if (role === "company") {
+        await CompanyProfile.create({
+          userId: user._id,
+          businessName: name,
+          servicesOffered: ["moving", "cleaning"],
+          baseRates: {},
+          description: ""
+        });
+      }
     } catch (error) {
+      console.error("User creation error:", error);
       await rollbackFirebaseUser();
       res.status(400);
-      throw new Error("Failed to create user in database. Account reset.");
+      const msg = error.code === 11000 
+        ? "An account with this email already exists in our database."
+        : (error.message || "Failed to create user profile.");
+      throw new Error(msg);
     }
   }
 

@@ -10,13 +10,8 @@ const roleBadge = {
   company: 'bg-orange-100 text-orange-700',
 };
 
-const statusBadge = {
-  Active: 'bg-green-100 text-green-700',
-  Banned: 'bg-red-100 text-red-700',
-};
-
 const UserManagement = () => {
-  const { user } = useAuth();
+  const { user: adminUser } = useAuth();
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
   const [users, setUsers] = useState([]);
@@ -34,8 +29,7 @@ const UserManagement = () => {
         });
         if (response.ok) {
           const data = await response.json();
-          const usersWithStatus = data.map(u => ({ ...u, status: 'Active' }));
-          setUsers(usersWithStatus);
+          setUsers(data);
         }
       } catch (error) {
         console.error('Failed to fetch users:', error);
@@ -43,21 +37,34 @@ const UserManagement = () => {
         setLoading(false);
       }
     };
-    if (user) fetchUsers();
-  }, [user]);
-
-  const handleBan = (id) => {
-    setUsers(prev => prev.map(u => u._id === id ? { ...u, status: u.status === 'Banned' ? 'Active' : 'Banned' } : u));
-  };
+    if (adminUser) fetchUsers();
+  }, [adminUser]);
 
   const requestDelete = (id) => {
     setConfirmModal({ isOpen: true, userId: id });
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (confirmModal.userId) {
-      setUsers(prev => prev.filter(u => u._id !== confirmModal.userId));
-      setConfirmModal({ isOpen: false, userId: null });
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        const res = await fetch(`http://localhost:5000/api/users/${confirmModal.userId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          setUsers(prev => prev.filter(u => u._id !== confirmModal.userId));
+          setConfirmModal({ isOpen: false, userId: null });
+        } else {
+          const errData = await res.json();
+          alert(`Failed to delete: ${errData.message || 'Unknown error'}`);
+          setConfirmModal({ isOpen: false, userId: null });
+        }
+      } catch (err) {
+        console.error('Delete failed:', err);
+        alert('Failed to delete user');
+        setConfirmModal({ isOpen: false, userId: null });
+      }
     }
   };
 
@@ -65,7 +72,11 @@ const UserManagement = () => {
     setConfirmModal({ isOpen: false, userId: null });
   };
 
+  // Filter out admin user from the list + apply search and role filter
   const filtered = users.filter(u => {
+    // Never show the current admin in the list
+    if (u._id === adminUser?._id) return false;
+
     const nameMatch = u.name?.toLowerCase().includes(search.toLowerCase());
     const emailMatch = u.email?.toLowerCase().includes(search.toLowerCase());
     const matchSearch = nameMatch || emailMatch;
@@ -78,7 +89,7 @@ const UserManagement = () => {
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">User Management</h1>
-        <p className="text-sm text-slate-500 mt-1">View, search, ban, or delete platform users.</p>
+        <p className="text-sm text-slate-500 mt-1">View, search, and manage platform users.</p>
       </div>
 
       {/* Filter Bar */}
@@ -100,7 +111,7 @@ const UserManagement = () => {
           onChange={e => setRoleFilter(e.target.value)}
           className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
         >
-          {['All', 'Admin', 'Owner', 'Tenant', 'Company'].map(r => (
+          {['All', 'Owner', 'Tenant', 'Company'].map(r => (
             <option key={r}>{r}</option>
           ))}
         </select>
@@ -113,7 +124,7 @@ const UserManagement = () => {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                {['Name', 'Email', 'Role', 'Status', 'Joined', 'Actions'].map(h => (
+                {['Name', 'Email', 'Phone', 'Role', 'Joined', 'Actions'].map(h => (
                   <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -129,43 +140,45 @@ const UserManagement = () => {
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
-                          {user.name ? user.name.charAt(0) : '?'}
+                          {user.name ? user.name.charAt(0).toUpperCase() : '?'}
                         </div>
                         <span className="font-medium text-slate-800">{user.name || 'Unnamed'}</span>
                       </div>
                     </td>
-                  <td className="px-5 py-3.5 text-slate-500">{user.email}</td>
-                  <td className="px-5 py-3.5">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${roleBadge[user.role] || 'bg-slate-100'}`}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusBadge[user.status]}`}>{user.status}</span>
-                  </td>
-                  <td className="px-5 py-3.5 text-slate-500">{user.joined}</td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-2">
+                    <td className="px-5 py-3.5 text-slate-500">{user.email}</td>
+                    <td className="px-5 py-3.5 text-slate-500">{user.phone || '-'}</td>
+                    <td className="px-5 py-3.5">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${roleBadge[user.role] || 'bg-slate-100'}`}>
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-slate-500 text-xs">
+                      {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
+                    </td>
+                    <td className="px-5 py-3.5">
                       <button
-                        onClick={() => handleBan(user._id)}
-                        className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors ${user.status === 'Banned' ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-yellow-700 bg-yellow-50 hover:bg-yellow-100'}`}
+                        onClick={() => requestDelete(user._id)}
+                        className="px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
                       >
-                        {user.status === 'Banned' ? 'Unban' : 'Ban'}
+                        Delete
                       </button>
-                      <button onClick={() => requestDelete(user._id)} className="px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">Delete</button>
-                    </div>
-                  </td>
-                </tr>
-              )))}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
+        </div>
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-between text-sm text-slate-500">
+          <span>Showing {filtered.length} of {users.filter(u => u._id !== adminUser?._id).length} users</span>
         </div>
       </div>
 
       <ConfirmModal 
         isOpen={confirmModal.isOpen} 
         title="Delete User" 
-        message="Are you sure you want to permanently delete this user? This action cannot be undone."
+        message="Are you sure you want to permanently delete this user? This action will also delete their properties or company profile and Firebase account."
         onConfirm={confirmDelete} 
         onCancel={cancelDelete} 
         confirmText="Delete" 

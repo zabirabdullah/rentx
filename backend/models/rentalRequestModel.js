@@ -5,10 +5,12 @@ const rentalRequestSchema = mongoose.Schema(
     propertyId: { type: mongoose.Schema.Types.ObjectId, ref: "Property", required: true },
     tenantId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    message: { type: String },
+    message: { type: String }, // General initial message
+    tenantNote: { type: String }, // Specific note from tenant when requesting/cancelling
+    ownerNote: { type: String }, // Specific note from owner when approving/rejecting
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected", "cancelled"],
+      enum: ["pending", "approved", "rejected", "cancelled", "completed"],
       default: "pending",
     },
   },

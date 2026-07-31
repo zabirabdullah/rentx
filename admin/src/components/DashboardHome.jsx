@@ -9,8 +9,10 @@ const DashboardHome = () => {
     properties: 0,
     pendingReports: 0,
     companies: 0,
+    rentalRequests: 0,
+    serviceRequests: 0,
   });
-  const [recentActivity, setRecentActivity] = useState([]);
+  const [recentReports, setRecentReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,12 +21,11 @@ const DashboardHome = () => {
         const token = await auth.currentUser?.getIdToken();
         const headers = { Authorization: `Bearer ${token}` };
 
-        // Fetch parallel
         const [usersRes, propsRes, reportsRes, companiesRes] = await Promise.all([
           fetch('http://localhost:5000/api/users', { headers }),
-          fetch('http://localhost:5000/api/properties'), // public API
+          fetch('http://localhost:5000/api/properties'),
           fetch('http://localhost:5000/api/reports', { headers }),
-          fetch('http://localhost:5000/api/companies'), // public API
+          fetch('http://localhost:5000/api/companies'),
         ]);
 
         const [usersData, propsData, reportsData, companiesData] = await Promise.all([
@@ -41,30 +42,10 @@ const DashboardHome = () => {
           companies: Array.isArray(companiesData) ? companiesData.length : 0,
         });
 
-        // Create simple mock activity based on real users/reports for now
-        // To avoid overcomplicating, we'll map recent users or reports to an activity feed
-        const newActivities = [];
-        if (Array.isArray(usersData) && usersData.length > 0) {
-          const recentUser = usersData[usersData.length - 1];
-          newActivities.push({
-            id: 'u1',
-            action: `New ${recentUser.role} registered`,
-            user: recentUser.name || 'Unknown',
-            time: 'Recently',
-            type: 'user'
-          });
+        // Show last 5 reports as recent activity
+        if (Array.isArray(reportsData)) {
+          setRecentReports(reportsData.slice(0, 5));
         }
-        if (Array.isArray(reportsData) && reportsData.length > 0) {
-          const recentReport = reportsData[reportsData.length - 1];
-          newActivities.push({
-            id: 'r1',
-            action: `Property report submitted`,
-            user: recentReport.reportedBy?.name || 'User',
-            time: 'Recently',
-            type: 'property'
-          });
-        }
-        setRecentActivity(newActivities);
 
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -80,8 +61,7 @@ const DashboardHome = () => {
     {
       label: 'Total Users',
       value: stats.users.toString(),
-      change: 'Active Accounts',
-      positive: true,
+      subtitle: 'Registered Accounts',
       color: 'bg-blue-50 text-blue-600',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -92,9 +72,8 @@ const DashboardHome = () => {
     {
       label: 'Pending Reports',
       value: stats.pendingReports.toString(),
-      change: 'Requires Action',
-      positive: stats.pendingReports === 0,
-      color: 'bg-yellow-50 text-yellow-600',
+      subtitle: stats.pendingReports === 0 ? 'All Clear' : 'Requires Action',
+      color: stats.pendingReports > 0 ? 'bg-yellow-50 text-yellow-600' : 'bg-green-50 text-green-600',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -104,8 +83,7 @@ const DashboardHome = () => {
     {
       label: 'Active Listings',
       value: stats.properties.toString(),
-      change: 'Platform Wide',
-      positive: true,
+      subtitle: 'Platform Wide',
       color: 'bg-green-50 text-green-600',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -116,8 +94,7 @@ const DashboardHome = () => {
     {
       label: 'Service Companies',
       value: stats.companies.toString(),
-      change: 'Registered Providers',
-      positive: true,
+      subtitle: 'Registered Providers',
       color: 'bg-purple-50 text-purple-600',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -127,11 +104,11 @@ const DashboardHome = () => {
     },
   ];
 
-  const activityColors = {
-    user: 'bg-blue-100 text-blue-600',
-    property: 'bg-green-100 text-green-600',
-    service: 'bg-purple-100 text-purple-600',
-    ban: 'bg-red-100 text-red-600',
+  const reportStatusColor = {
+    pending: 'bg-yellow-100 text-yellow-700',
+    reviewed: 'bg-blue-100 text-blue-700',
+    dismissed: 'bg-slate-100 text-slate-600',
+    action_taken: 'bg-red-100 text-red-700',
   };
 
   return (
@@ -156,34 +133,41 @@ const DashboardHome = () => {
                 <div>
                   <p className="text-sm text-slate-500 font-medium">{m.label}</p>
                   <p className="text-2xl font-bold text-slate-900 mt-0.5">{m.value}</p>
-                  <p className={`text-xs mt-1 font-medium ${m.positive ? 'text-green-600' : 'text-yellow-600'}`}>
-                    {m.change}
+                  <p className={`text-xs mt-1 font-medium ${stats.pendingReports > 0 && m.label === 'Pending Reports' ? 'text-yellow-600' : 'text-green-600'}`}>
+                    {m.subtitle}
                   </p>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Recent Activity */}
+          {/* Recent Reports */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
             <div className="px-6 py-4 border-b border-slate-100">
-              <h2 className="text-base font-semibold text-slate-900">Recent Activity</h2>
-              <p className="text-xs text-slate-500 mt-0.5">Latest actions across the platform</p>
+              <h2 className="text-base font-semibold text-slate-900">Recent Reports</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Latest property reports submitted by users</p>
             </div>
             <ul className="divide-y divide-slate-100">
-              {recentActivity.length === 0 ? (
-                <li className="px-6 py-8 text-center text-slate-500 text-sm">No recent activity.</li>
+              {recentReports.length === 0 ? (
+                <li className="px-6 py-8 text-center text-slate-400 text-sm">No reports submitted yet. The platform is clean!</li>
               ) : (
-                recentActivity.map((item) => (
-                  <li key={item.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${activityColors[item.type]}`}>
-                      {item.user.charAt(0).toUpperCase()}
+                recentReports.map((report) => (
+                  <li key={report._id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors">
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${reportStatusColor[report.status] || 'bg-slate-100'}`}>
+                      {report.status === 'pending' ? '!' : '✓'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800 truncate">{item.action}</p>
-                      <p className="text-xs text-slate-500">by <span className="font-semibold">{item.user}</span></p>
+                      <p className="text-sm font-medium text-slate-800 truncate">
+                        {report.reason}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Reported by <span className="font-semibold">{report.reportedBy?.name || 'Unknown'}</span>
+                        {report.propertyId?.address && ` · Property: ${report.propertyId.address}`}
+                      </p>
                     </div>
-                    <span className="text-xs text-slate-400 whitespace-nowrap">{item.time}</span>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize flex-shrink-0 ${reportStatusColor[report.status] || 'bg-slate-100'}`}>
+                      {report.status?.replace('_', ' ')}
+                    </span>
                   </li>
                 ))
               )}

@@ -4,6 +4,7 @@ import DashboardHome from './components/DashboardHome';
 import UserManagement from './components/UserManagement';
 import PropertyApprovals from './components/PropertyApprovals';
 import ServiceManagement from './components/ServiceManagement';
+import ReportsManagement from './components/ReportsManagement';
 import Login from './components/Login';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './index.css';
@@ -24,6 +25,7 @@ function AppRoutes() {
         <Route index element={<DashboardHome />} />
         <Route path="users" element={<UserManagement />} />
         <Route path="properties" element={<PropertyApprovals />} />
+        <Route path="reports" element={<ReportsManagement />} />
         <Route path="services" element={<ServiceManagement />} />
       </Route>
       <Route path="*" element={<Navigate to="/admin" replace />} />

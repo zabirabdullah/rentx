@@ -62,6 +62,7 @@ const RegistrationForm = () => {
       navigate('/');
     } catch (err) {
       setError(err.message || 'Failed to register');
+      auth.signOut();
     } finally {
       setLoading(false);
     }

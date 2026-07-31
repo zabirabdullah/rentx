@@ -89,4 +89,32 @@ const updateProfile = asyncHandler(async (req, res) => {
   res.json(updatedCompany);
 });
 
-export { getCompanies, getCompanyById, createProfile, updateProfile };
+// @desc    Get current company's profile
+// @route   GET /api/companies/my
+// @access  Private/Company
+const getMyProfile = asyncHandler(async (req, res) => {
+  const company = await CompanyProfile.findOne({ userId: req.user._id }).populate("userId", "name email phone address");
+  
+  if (company) {
+    res.json(company);
+  } else {
+    // If they haven't created a profile yet, return null instead of 404 so frontend can show "Create Profile" form
+    res.json(null);
+  }
+});
+
+// @desc    Delete a company profile
+// @route   DELETE /api/companies/:id
+// @access  Private/Admin
+const deleteCompanyProfile = asyncHandler(async (req, res) => {
+  const company = await CompanyProfile.findById(req.params.id);
+  if (!company) {
+    res.status(404);
+    throw new Error("Company profile not found");
+  }
+
+  await CompanyProfile.findByIdAndDelete(req.params.id);
+  res.json({ message: "Company profile deleted successfully" });
+});
+
+export { getCompanies, getCompanyById, getMyProfile, createProfile, updateProfile, deleteCompanyProfile };

@@ -76,12 +76,19 @@ const updateRequestStatus = asyncHandler(async (req, res) => {
     res.status(403); throw new Error("Not authorized");
   }
 
-  if (isCompany) {
+  if (status === "cancelled") {
+    if (request.status === "completed") {
+      res.status(400);
+      throw new Error("Cannot cancel a completed request");
+    }
+  } else if (isCompany) {
     if (status === "quoted") {
       if (request.status !== "pending") { res.status(400); throw new Error("Can only quote a pending request"); }
-      if (!estimatedCost || estimatedCost <= 0) { res.status(400); throw new Error("Estimated cost is required"); }
+      if (estimatedCost === undefined || estimatedCost === null || isNaN(estimatedCost) || estimatedCost < 0) { 
+        res.status(400); throw new Error("Valid estimated cost (0 or greater) is required"); 
+      }
       request.estimatedCost = estimatedCost;
-      request.companyNote = companyNote || request.companyNote;
+      request.companyNote = companyNote !== undefined ? companyNote : request.companyNote;
     } else if (status === "in_progress") {
       if (request.status !== "accepted") { res.status(400); throw new Error("Must be accepted first"); }
     } else if (status === "completed") {
@@ -89,9 +96,8 @@ const updateRequestStatus = asyncHandler(async (req, res) => {
     }
   }
 
-  if (isRequester) {
+  if (isRequester && status !== "cancelled") {
     if (status === "accepted" && request.status !== "quoted") { res.status(400); throw new Error("Must be quoted first"); }
-    if (status === "cancelled" && !["pending", "quoted"].includes(request.status)) { res.status(400); throw new Error("Too late to cancel"); }
   }
 
   request.status = status;

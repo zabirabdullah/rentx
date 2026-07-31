@@ -39,6 +39,7 @@ const propertySchema = mongoose.Schema(
     bedroom: { type: Number },
     bathroom: { type: Number },
     balcony: { type: Number },
+    showPhone: { type: Boolean, default: false },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
