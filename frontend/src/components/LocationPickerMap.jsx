@@ -19,8 +19,8 @@ const LocationMarker = ({ position, setPosition, onLocationSelect }) => {
 };
 
 const LocationPickerMap = ({ initialLocation, onLocationSelect }) => {
-  // Default to Dhaka, Bangladesh if no initial location
-  const defaultCenter = [23.8103, 90.4125]; 
+  // Default to Chittagong, Bangladesh if no initial location
+  const defaultCenter = [22.3569, 91.7832]; 
   const [position, setPosition] = useState(
     initialLocation && initialLocation.lat && initialLocation.lng 
       ? [initialLocation.lat, initialLocation.lng] 

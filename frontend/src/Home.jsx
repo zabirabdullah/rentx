@@ -21,6 +21,9 @@ const Home = () => {
         if (filters.category) queryParams.append('category', filters.category);
         if (filters.minPrice !== undefined) queryParams.append('minPrice', filters.minPrice);
         if (filters.maxPrice !== undefined) queryParams.append('maxPrice', filters.maxPrice);
+        if (filters.lat !== undefined) queryParams.append('lat', filters.lat);
+        if (filters.lng !== undefined) queryParams.append('lng', filters.lng);
+        if (filters.radius !== undefined) queryParams.append('radius', filters.radius);
 
         const response = await fetch(`http://localhost:5000/api/properties?${queryParams.toString()}`);
         if (response.ok) {

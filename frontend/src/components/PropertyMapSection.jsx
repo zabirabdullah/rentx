@@ -36,8 +36,8 @@ const PropertyMapSection = ({ properties }) => {
     { label: 'ATM Booth', value: 'atm_booth' }
   ];
 
-  // Default center (Dhaka)
-  const defaultCenter = [23.7937, 90.4066];
+  // Default center (Chittagong, Bangladesh)
+  const defaultCenter = [22.3569, 91.7832];
 
   useEffect(() => {
     if (activeCategory === 'All') {

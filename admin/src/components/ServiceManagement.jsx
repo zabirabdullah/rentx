@@ -19,8 +19,6 @@ const ServiceManagement = () => {
   const { user } = useAuth();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editService, setEditService] = useState(null);
-  const [editRate, setEditRate] = useState('');
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -48,16 +46,6 @@ const ServiceManagement = () => {
     if (window.confirm('Delete this service permanently?')) {
       setServices(prev => prev.filter(s => s._id !== id));
     }
-  };
-
-  const openEdit = (service) => {
-    setEditService(service);
-    setEditRate(service.baseRate || '');
-  };
-
-  const saveEdit = () => {
-    setServices(prev => prev.map(s => s._id === editService._id ? { ...s, baseRate: editRate } : s));
-    setEditService(null);
   };
 
   return (
@@ -112,7 +100,6 @@ const ServiceManagement = () => {
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => openEdit(svc)} className="px-2.5 py-1 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">Edit Rates</button>
                       <button
                         onClick={() => toggleSuspend(svc._id)}
                         className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors ${svc.status === 'Suspended' ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-yellow-700 bg-yellow-50 hover:bg-yellow-100'}`}
@@ -137,28 +124,6 @@ const ServiceManagement = () => {
           </div>
         </div>
       </div>
-
-      {/* Edit Rate Modal */}
-      {editService && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-1">Edit Base Rate</h2>
-            <p className="text-sm text-slate-500 mb-5">{editService.companyName} — {editService.serviceTypes?.join(', ')}</p>
-            <label className="block text-sm font-medium text-slate-700 mb-1">New Base Rate</label>
-            <input
-              type="text"
-              value={editRate}
-              onChange={e => setEditRate(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:bg-white transition-all"
-              placeholder="e.g. $70/hr"
-            />
-            <div className="flex gap-3 mt-5">
-              <button onClick={saveEdit} className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-sm transition-colors">Save Changes</button>
-              <button onClick={() => setEditService(null)} className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-sm transition-colors">Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
