@@ -21,6 +21,13 @@ import CompanyOverview from './components/dashboard/company/CompanyOverview';
 import ManageServices from './components/dashboard/company/ManageServices';
 import ClientJobs from './components/dashboard/company/ClientJobs';
 
+// Public pages
+import PropertiesPage from './components/public/PropertiesPage';
+import PropertyDetailsPage from './components/public/PropertyDetailsPage';
+import CompaniesPage from './components/public/CompaniesPage';
+import CompanyDetailsPage from './components/public/CompanyDetailsPage';
+import ServiceRequestForm from './components/public/ServiceRequestForm';
+
 import './index.css';
 
 // Smart dashboard index — redirects to the right overview based on role
@@ -41,6 +48,11 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/properties" element={<PropertiesPage />} />
+          <Route path="/properties/:id" element={<PropertyDetailsPage />} />
+          <Route path="/companies" element={<CompaniesPage />} />
+          <Route path="/companies/:id" element={<CompanyDetailsPage />} />
+          <Route path="/request-service/:companyId" element={<ServiceRequestForm />} />
 
           {/* Dashboard — nested routes */}
           <Route path="/dashboard" element={<DashboardLayout />}>

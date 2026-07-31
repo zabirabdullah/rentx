@@ -36,9 +36,9 @@ const Navbar = () => {
         </Link>
 
         <ul className="navbar-links">
-          <li><a href="/#properties">Browse Properties</a></li>
+          <li><Link to="/properties">Browse Properties</Link></li>
           <li><a href="/#map">Map View</a></li>
-          <li><a href="/#services">Services</a></li>
+          <li><Link to="/companies">Services</Link></li>
           <li><a href="/#list">List Property</a></li>
         </ul>
 
