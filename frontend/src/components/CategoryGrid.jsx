@@ -4,6 +4,7 @@ const categories = [
   {
     id: 1,
     title: 'Houses',
+    categoryKey: 'house',
     desc: 'Find comfortable homes and apartments.',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -15,6 +16,7 @@ const categories = [
   {
     id: 2,
     title: 'Offices',
+    categoryKey: 'office',
     desc: 'Professional workspaces for your team.',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -35,6 +37,7 @@ const categories = [
   {
     id: 3,
     title: 'Commercial',
+    categoryKey: 'commercial_space',
     desc: 'Retail shops and commercial spaces.',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -49,6 +52,7 @@ const categories = [
   {
     id: 4,
     title: 'Godowns',
+    categoryKey: 'godown',
     desc: 'Secure storage and warehouse facilities.',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -62,6 +66,7 @@ const categories = [
   {
     id: 5,
     title: 'Garages',
+    categoryKey: 'garage',
     desc: 'Safe parking spaces for your vehicles.',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -75,6 +80,7 @@ const categories = [
   {
     id: 6,
     title: 'ATM Booths',
+    categoryKey: 'atm_booth',
     desc: 'Strategic locations for banking kiosks.',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -87,7 +93,7 @@ const categories = [
   }
 ];
 
-const CategoryGrid = () => {
+const CategoryGrid = ({ onSelectCategory }) => {
   return (
     <section id="properties" className="category-section">
       <div className="container">
@@ -96,7 +102,12 @@ const CategoryGrid = () => {
         
         <div className="category-grid">
           {categories.map((category) => (
-            <div key={category.id} className="category-card">
+            <div 
+              key={category.id} 
+              className="category-card" 
+              onClick={() => onSelectCategory && onSelectCategory(category.categoryKey)}
+              style={{ cursor: 'pointer' }}
+            >
               <div className="category-icon">
                 {category.icon}
               </div>

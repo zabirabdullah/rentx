@@ -11,34 +11,49 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Component to recenter map
-function ChangeView({ center, zoom }) {
+// Component to recenter map and fit bounds
+function ChangeView({ properties }) {
   const map = useMap();
-  map.setView(center, zoom);
+  useEffect(() => {
+    if (properties && properties.length > 0) {
+      const bounds = L.latLngBounds(properties.map(p => [p.lat, p.lng]));
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+    }
+  }, [properties, map]);
   return null;
 }
 
 const PropertyMapSection = ({ properties }) => {
   const [activeCategory, setActiveCategory] = useState('All');
   const [filteredProperties, setFilteredProperties] = useState(properties);
-  const categories = ['All', 'House', 'Office', 'Commercial', 'Godown', 'Garage', 'ATM Booth'];
+  const categories = [
+    { label: 'All', value: 'All' },
+    { label: 'House', value: 'house' },
+    { label: 'Office', value: 'office' },
+    { label: 'Commercial', value: 'commercial_space' },
+    { label: 'Godown', value: 'godown' },
+    { label: 'Garage', value: 'garage' },
+    { label: 'ATM Booth', value: 'atm_booth' }
+  ];
 
-  // Default center
-  const center = [51.505, -0.09];
+  // Default center (Dhaka)
+  const defaultCenter = [23.7937, 90.4066];
 
   useEffect(() => {
     if (activeCategory === 'All') {
       setFilteredProperties(properties);
     } else {
-      setFilteredProperties(properties.filter(p => p.type === activeCategory));
+      setFilteredProperties(properties.filter(p => p.category === activeCategory));
     }
   }, [activeCategory, properties]);
 
   // Create custom icon
   const createCustomIcon = (property) => {
+    const title = (property.category || 'property').replace('_', ' ');
+    const price = property.rentPrice ? property.rentPrice.toLocaleString() : 'N/A';
     return L.divIcon({
       className: 'custom-marker',
-      html: `<div class="custom-marker-badge">${property.type} - ${property.price}</div>`,
+      html: `<div class="custom-marker-badge capitalize">${title} - ৳${price}</div>`,
       iconSize: [100, 30],
       iconAnchor: [50, 35],
       popupAnchor: [0, -35]
@@ -46,8 +61,16 @@ const PropertyMapSection = ({ properties }) => {
   };
 
   const handleCenterMap = () => {
-    // In a real app, this would use navigator.geolocation
-    alert('Centering on your location (simulated)');
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          alert(`Your location: ${position.coords.latitude}, ${position.coords.longitude}\nIn a full implementation, the map would recenter here.`);
+        },
+        () => alert('Unable to retrieve your location')
+      );
+    } else {
+      alert('Geolocation not supported by this browser.');
+    }
   };
 
   return (
@@ -56,45 +79,51 @@ const PropertyMapSection = ({ properties }) => {
         <h2 className="section-title">Explore on Map</h2>
         <p className="section-subtitle">Find properties exactly where you want them.</p>
 
+        {properties.length === 0 && (
+          <div className="bg-yellow-50 text-yellow-800 p-4 rounded-lg mb-4 text-center font-semibold">
+            No properties found matching your search.
+          </div>
+        )}
+
         <div className="map-filter-bar">
           {categories.map(cat => (
             <button 
-              key={cat} 
-              className={`filter-pill ${activeCategory === cat ? 'active' : ''}`}
-              onClick={() => setActiveCategory(cat)}
+              key={cat.value} 
+              className={`filter-pill ${activeCategory === cat.value ? 'active' : ''}`}
+              onClick={() => setActiveCategory(cat.value)}
             >
-              {cat}
+              {cat.label}
             </button>
           ))}
           <button className="btn-secondary" style={{ padding: '8px 16px' }} onClick={handleCenterMap}>
-            Center on My Location
+            My Location
           </button>
         </div>
 
         <div className="map-container">
-          <MapContainer center={center} zoom={13} style={{ height: '100%', width: '100%' }}>
-            <ChangeView center={center} zoom={13} />
+          <MapContainer center={defaultCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
+            <ChangeView properties={filteredProperties} />
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
             />
             {filteredProperties.map(property => (
               <Marker 
-                key={property.id} 
+                key={property._id} 
                 position={[property.lat, property.lng]}
                 icon={createCustomIcon(property)}
               >
                 <Popup>
                   <div className="property-popup">
-                    <img src={property.image} alt={property.title} className="property-popup-img" />
+                    <img src={property.images?.[0] || 'https://via.placeholder.com/400'} alt={property.address} className="property-popup-img" />
                     <div className="property-popup-info">
-                      <h3 className="property-popup-title">{property.title}</h3>
-                      <p className="property-popup-address">{property.address}</p>
-                      <p className="property-popup-specs">{property.specs}</p>
-                      <span className={`status-pill ${property.status === 'Available' ? 'status-available' : 'status-pending'}`}>
-                        {property.status}
-                      </span>
-                      <button className="popup-btn">View Details</button>
+                      <h3 className="property-popup-title truncate">{property.address || 'Unknown Address'}</h3>
+                      <p className="property-popup-specs text-xs text-slate-500 mt-1 capitalize">{property.category?.replace('_', ' ')} · {property.area} sqft</p>
+                      <p className="font-semibold text-slate-900 mt-1">৳{property.rentPrice?.toLocaleString()}/mo</p>
+                      
+                      <button className="popup-btn mt-2 w-full text-xs" onClick={() => window.location.href = `/properties/${property._id}`}>
+                        View Details
+                      </button>
                     </div>
                   </div>
                 </Popup>

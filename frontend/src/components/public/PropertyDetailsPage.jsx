@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useUser } from '../../context/UserContext';
 import Navbar from '../Navbar';
 import Footer from '../Footer';
 
@@ -11,6 +12,9 @@ const mockProperties = [
 
 const PropertyDetailsPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useUser();
+
   const property = mockProperties.find(p => p.id === parseInt(id)) || { 
     ...mockProperties[0], 
     id: parseInt(id), 
@@ -21,8 +25,20 @@ const PropertyDetailsPage = () => {
   const [requestSent, setRequestSent] = useState(false);
 
   const handleRequest = () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
     setRequestSent(true);
     setTimeout(() => setRequestSent(false), 3000);
+  };
+
+  const handleReport = () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    alert('Report submitted.');
   };
 
   return (
@@ -94,7 +110,9 @@ const PropertyDetailsPage = () => {
                   >
                     {requestSent ? 'Request Sent! ✓' : 'Request to Rent'}
                   </button>
-                  <button className="w-full py-3 px-4 rounded-xl font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors flex items-center justify-center gap-2">
+                  <button 
+                    onClick={handleReport}
+                    className="w-full py-3 px-4 rounded-xl font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors flex items-center justify-center gap-2">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                     Report Property
                   </button>

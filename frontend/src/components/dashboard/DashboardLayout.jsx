@@ -30,10 +30,21 @@ const roleConfig = {
       { to: '/dashboard/jobs', label: 'Client Jobs', icon: '💼' },
     ],
   },
+  admin: {
+    label: 'Admin',
+    color: 'bg-purple-600',
+    links: [
+      { to: '/dashboard', label: 'Overview', end: true, icon: '📊' },
+      { to: '/dashboard/admin/users', label: 'Manage Users', icon: '👥' },
+      { to: '/dashboard/admin/properties', label: 'Properties', icon: '🏢' },
+      { to: '/dashboard/admin/companies', label: 'Companies', icon: '🏬' },
+      { to: '/dashboard/admin/reports', label: 'Reports', icon: '⚠️' },
+    ],
+  },
 };
 
 const DashboardLayout = () => {
-  const { user, switchRole, logout } = useUser();
+  const { user, logout } = useUser();
   if (!user) return <div className="min-h-screen flex items-center justify-center"><p className="text-slate-500">Not logged in. <Link to="/login" className="text-green-600 font-semibold">Login here</Link></p></div>;
 
   const config = roleConfig[user.role];
@@ -59,7 +70,7 @@ const DashboardLayout = () => {
         <div className="px-4 py-4 border-b border-slate-700">
           <div className="flex items-center gap-3">
             <div className={`w-9 h-9 rounded-full ${config.color} flex items-center justify-center text-white font-bold text-sm`}>
-              {user.avatar}
+              {user.name ? user.name.charAt(0) : '?'}
             </div>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-white truncate">{user.name}</p>
@@ -88,22 +99,7 @@ const DashboardLayout = () => {
           ))}
         </nav>
 
-        {/* Role Switcher (Demo Only) */}
-        <div className="px-4 pb-4 border-t border-slate-700 pt-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">Preview Role</p>
-          <div className="flex gap-1.5">
-            {['owner', 'tenant', 'company'].map(r => (
-              <button
-                key={r}
-                onClick={() => switchRole(r)}
-                className={`flex-1 py-1 rounded-md text-xs font-semibold capitalize transition-colors
-                  ${user.role === r ? 'bg-green-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-        </div>
+
 
         {/* Logout */}
         <div className="px-4 pb-5">

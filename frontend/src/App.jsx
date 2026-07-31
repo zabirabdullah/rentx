@@ -21,6 +21,13 @@ import CompanyOverview from './components/dashboard/company/CompanyOverview';
 import ManageServices from './components/dashboard/company/ManageServices';
 import ClientJobs from './components/dashboard/company/ClientJobs';
 
+// Admin pages
+import AdminOverview from './components/dashboard/admin/AdminOverview';
+import AdminUsersPage from './components/dashboard/admin/AdminUsersPage';
+import AdminPropertiesPage from './components/dashboard/admin/AdminPropertiesPage';
+import AdminCompaniesPage from './components/dashboard/admin/AdminCompaniesPage';
+import AdminReportsPage from './components/dashboard/admin/AdminReportsPage';
+
 // Public pages
 import PropertiesPage from './components/public/PropertiesPage';
 import PropertyDetailsPage from './components/public/PropertyDetailsPage';
@@ -36,6 +43,7 @@ const DashboardIndex = () => {
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'tenant') return <TenantOverview />;
   if (user.role === 'company') return <CompanyOverview />;
+  if (user.role === 'admin') return <AdminOverview />;
   return <OwnerOverview />; // default to owner
 };
 
@@ -69,6 +77,12 @@ function App() {
             {/* Company routes */}
             <Route path="services" element={<ManageServices />} />
             <Route path="jobs" element={<ClientJobs />} />
+
+            {/* Admin routes */}
+            <Route path="admin/users" element={<AdminUsersPage />} />
+            <Route path="admin/properties" element={<AdminPropertiesPage />} />
+            <Route path="admin/companies" element={<AdminCompaniesPage />} />
+            <Route path="admin/reports" element={<AdminReportsPage />} />
           </Route>
         </Routes>
       </Router>

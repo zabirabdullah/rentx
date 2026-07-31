@@ -1,21 +1,13 @@
-import React, { useState } from 'react';
-
-const mockServices = [
-  { id: 1, company: 'CleanPro Co.', category: 'Cleaning', baseRate: '$50/hr', status: 'Active' },
-  { id: 2, company: 'MoveIt LLC', category: 'Moving', baseRate: '$120/hr', status: 'Active' },
-  { id: 3, company: 'SparkWire Electricals', category: 'Electrician', baseRate: '$75/hr', status: 'Suspended' },
-  { id: 4, company: 'PaintMasters', category: 'Painting', baseRate: '$60/hr', status: 'Active' },
-  { id: 5, company: 'PipeFix Solutions', category: 'Plumbing', baseRate: '$80/hr', status: 'Active' },
-  { id: 6, company: 'QuickMove Bros', category: 'Moving', baseRate: '$100/hr', status: 'Suspended' },
-  { id: 7, company: 'BrightClean Services', category: 'Cleaning', baseRate: '$45/hr', status: 'Active' },
-];
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { auth } from '../config/firebase';
 
 const categoryColors = {
-  Cleaning: 'bg-sky-100 text-sky-700',
-  Moving: 'bg-orange-100 text-orange-700',
-  Electrician: 'bg-yellow-100 text-yellow-700',
-  Painting: 'bg-pink-100 text-pink-700',
-  Plumbing: 'bg-blue-100 text-blue-700',
+  cleaning: 'bg-sky-100 text-sky-700',
+  moving: 'bg-orange-100 text-orange-700',
+  electrician: 'bg-yellow-100 text-yellow-700',
+  painting: 'bg-pink-100 text-pink-700',
+  plumbing: 'bg-blue-100 text-blue-700',
 };
 
 const statusStyles = {
@@ -24,27 +16,47 @@ const statusStyles = {
 };
 
 const ServiceManagement = () => {
-  const [services, setServices] = useState(mockServices);
+  const { user } = useAuth();
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [editService, setEditService] = useState(null);
   const [editRate, setEditRate] = useState('');
 
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/companies');
+        if (res.ok) {
+          const data = await res.json();
+          // Add default status
+          setServices(data.map(c => ({ ...c, status: 'Active' })));
+        }
+      } catch (error) {
+        console.error('Error fetching companies:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (user) fetchCompanies();
+  }, [user]);
+
   const toggleSuspend = (id) => {
-    setServices(prev => prev.map(s => s.id === id ? { ...s, status: s.status === 'Suspended' ? 'Active' : 'Suspended' } : s));
+    setServices(prev => prev.map(s => s._id === id ? { ...s, status: s.status === 'Suspended' ? 'Active' : 'Suspended' } : s));
   };
 
   const handleDelete = (id) => {
     if (window.confirm('Delete this service permanently?')) {
-      setServices(prev => prev.filter(s => s.id !== id));
+      setServices(prev => prev.filter(s => s._id !== id));
     }
   };
 
   const openEdit = (service) => {
     setEditService(service);
-    setEditRate(service.baseRate);
+    setEditRate(service.baseRate || '');
   };
 
   const saveEdit = () => {
-    setServices(prev => prev.map(s => s.id === editService.id ? { ...s, baseRate: editRate } : s));
+    setServices(prev => prev.map(s => s._id === editService._id ? { ...s, baseRate: editRate } : s));
     setEditService(null);
   };
 
@@ -81,13 +93,20 @@ const ServiceManagement = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {services.map(svc => (
-                <tr key={svc.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-5 py-3.5 font-medium text-slate-800">{svc.company}</td>
-                  <td className="px-5 py-3.5">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${categoryColors[svc.category] || 'bg-gray-100 text-gray-700'}`}>{svc.category}</span>
+              {loading ? (
+                <tr><td colSpan="5" className="px-5 py-10 text-center text-slate-500">Loading companies...</td></tr>
+              ) : services.length === 0 ? (
+                <tr><td colSpan="5" className="px-5 py-10 text-center text-slate-400">No companies found.</td></tr>
+              ) : (
+              services.map(svc => (
+                <tr key={svc._id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-5 py-3.5 font-medium text-slate-800">{svc.companyName}</td>
+                  <td className="px-5 py-3.5 flex flex-wrap gap-1">
+                    {svc.serviceTypes?.map(st => (
+                      <span key={st} className={`px-2.5 py-1 rounded-full text-xs font-semibold ${categoryColors[st.toLowerCase()] || 'bg-gray-100 text-gray-700'}`}>{st}</span>
+                    ))}
                   </td>
-                  <td className="px-5 py-3.5 font-semibold text-slate-700">{svc.baseRate}</td>
+                  <td className="px-5 py-3.5 font-semibold text-slate-700">{svc.baseRate ? `৳${svc.baseRate.toLocaleString()}` : 'Variable'}</td>
                   <td className="px-5 py-3.5">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusStyles[svc.status]}`}>{svc.status}</span>
                   </td>
@@ -95,16 +114,16 @@ const ServiceManagement = () => {
                     <div className="flex items-center gap-2">
                       <button onClick={() => openEdit(svc)} className="px-2.5 py-1 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">Edit Rates</button>
                       <button
-                        onClick={() => toggleSuspend(svc.id)}
+                        onClick={() => toggleSuspend(svc._id)}
                         className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors ${svc.status === 'Suspended' ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-yellow-700 bg-yellow-50 hover:bg-yellow-100'}`}
                       >
                         {svc.status === 'Suspended' ? 'Reactivate' : 'Suspend'}
                       </button>
-                      <button onClick={() => handleDelete(svc.id)} className="px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">Delete</button>
+                      <button onClick={() => handleDelete(svc._id)} className="px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">Delete</button>
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>
@@ -124,7 +143,7 @@ const ServiceManagement = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-1">Edit Base Rate</h2>
-            <p className="text-sm text-slate-500 mb-5">{editService.company} — {editService.category}</p>
+            <p className="text-sm text-slate-500 mb-5">{editService.companyName} — {editService.serviceTypes?.join(', ')}</p>
             <label className="block text-sm font-medium text-slate-700 mb-1">New Base Rate</label>
             <input
               type="text"

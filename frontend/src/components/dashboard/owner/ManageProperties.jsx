@@ -1,34 +1,129 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import LocationPickerMap from '../../LocationPickerMap';
+import { useUser } from '../../../context/UserContext';
+import { auth } from '../../../config/firebase';
 
-const initialProperties = [
-  { id: 1, title: 'Modern 3BR Apartment', category: 'House', price: '$1,200/mo', location: 'Green St, NY', status: 'Active' },
-  { id: 2, title: 'Downtown Office', category: 'Office', price: '$3,500/mo', location: '5th Ave, NY', status: 'Active' },
-  { id: 3, title: 'Secure Garage', category: 'Garage', price: '$150/mo', location: 'West Side, NY', status: 'Inactive' },
-  { id: 4, title: 'ATM Corner Space', category: 'ATM Booth', price: '$500/mo', location: 'Broadway, NY', status: 'Active' },
-];
-
-const emptyForm = { title: '', category: 'House', price: '', location: '', lat: '', lng: '', specs: '', status: 'Active' };
-const categories = ['House', 'Office', 'Commercial', 'Godown', 'Garage', 'ATM Booth'];
-const statusColors = { Active: 'bg-green-100 text-green-700', Inactive: 'bg-slate-100 text-slate-600' };
+const emptyForm = { title: '', category: 'house', price: '', location: '', lat: '', lng: '', specs: '', status: 'Available' };
+const categories = ['house', 'office', 'commercial_space', 'godown', "garage", "atm_booth"];
+const statusColors = { Available: 'bg-green-100 text-green-700', Unavailable: 'bg-slate-100 text-slate-600' };
 
 const ManageProperties = () => {
-  const [properties, setProperties] = useState(initialProperties);
+  const { user } = useUser();
+  const [properties, setProperties] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchMyProperties = async () => {
+      try {
+        if (!user || !user._id) return;
+        const response = await fetch(`http://localhost:5000/api/properties?ownerId=${user._id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setProperties(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch properties', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMyProperties();
+  }, [user]);
 
   const openAdd = () => { setForm(emptyForm); setEditingId(null); setShowModal(true); };
-  const openEdit = (p) => { setForm({ ...p }); setEditingId(p.id); setShowModal(true); };
-  const handleDelete = (id) => { if (window.confirm('Delete this listing?')) setProperties(prev => prev.filter(p => p.id !== id)); };
+  const openEdit = (p) => { 
+    setForm({ 
+      title: p.title, 
+      category: p.category, 
+      price: p.rentPrice?.toString() || '', 
+      location: p.address || '', 
+      lat: p.lat?.toString() || '', 
+      lng: p.lng?.toString() || '', 
+      specs: p.specs || '', 
+      status: p.isAvailable ? 'Available' : 'Unavailable' 
+    }); 
+    setEditingId(p._id); 
+    setShowModal(true); 
+  };
 
-  const handleSubmit = (e) => {
+  const handleDelete = async (id) => { 
+    if (window.confirm('Delete this listing?')) {
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        const res = await fetch(`http://localhost:5000/api/properties/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) setProperties(prev => prev.filter(p => p._id !== id));
+      } catch (err) {
+        console.error('Delete failed', err);
+      }
+    } 
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingId) {
-      setProperties(prev => prev.map(p => p.id === editingId ? { ...form, id: editingId } : p));
-    } else {
-      setProperties(prev => [...prev, { ...form, id: Date.now() }]);
+    setSubmitting(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const payload = {
+        name: form.title,
+        title: form.title,
+        category: form.category.toLowerCase(),
+        rentPrice: parseFloat(form.price),
+        address: form.location,
+        holdingNo: 'N/A', // default placeholder
+        area: 'N/A', // default placeholder
+        storey: 1, // default
+        elevator: false, // default
+        lat: form.lat ? parseFloat(form.lat) : undefined,
+        lng: form.lng ? parseFloat(form.lng) : undefined,
+        specs: form.specs,
+        isAvailable: form.status === 'Available',
+        images: ['https://via.placeholder.com/400'], // dummy default
+      };
+      
+      // Need bedroom/bathroom if house
+      if (payload.category === 'house') {
+        payload.bedroom = 1;
+        payload.bathroom = 1;
+      }
+
+      if (editingId) {
+        const res = await fetch(`http://localhost:5000/api/properties/${editingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          setProperties(prev => prev.map(p => p._id === editingId ? updated : p));
+        } else {
+          alert('Failed to update: ' + (await res.text()));
+        }
+      } else {
+        const res = await fetch(`http://localhost:5000/api/properties`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const created = await res.json();
+          setProperties(prev => [...prev, created]);
+        } else {
+          alert('Failed to create: ' + (await res.text()));
+        }
+      }
+      setShowModal(false);
+    } catch (err) {
+      console.error('Submit failed', err);
+    } finally {
+      setSubmitting(false);
     }
-    setShowModal(false);
   };
 
   const inputClass = "w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:bg-white transition-all";
@@ -58,24 +153,27 @@ const ManageProperties = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {properties.map(p => (
-                <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-5 py-3.5 font-medium text-slate-800">{p.title}</td>
-                  <td className="px-5 py-3.5 text-slate-600">{p.category}</td>
-                  <td className="px-5 py-3.5 font-semibold text-slate-700">{p.price}</td>
-                  <td className="px-5 py-3.5 text-slate-500">{p.location}</td>
+              {loading ? (
+                <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-500">Loading...</td></tr>
+              ) : properties.length === 0 ? (
+                <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-400">No properties yet.</td></tr>
+              ) : properties.map(p => (
+                <tr key={p._id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-5 py-3.5 font-medium text-slate-800">{p.title || p.name}</td>
+                  <td className="px-5 py-3.5 text-slate-600 capitalize">{p.category?.replace('_', ' ')}</td>
+                  <td className="px-5 py-3.5 font-semibold text-slate-700">৳{p.rentPrice?.toLocaleString()}</td>
+                  <td className="px-5 py-3.5 text-slate-500">{p.address}</td>
                   <td className="px-5 py-3.5">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusColors[p.status]}`}>{p.status}</span>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusColors[p.isAvailable ? 'Available' : 'Unavailable']}`}>{p.isAvailable ? 'Available' : 'Unavailable'}</span>
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2">
                       <button onClick={() => openEdit(p)} className="px-2.5 py-1 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">Edit</button>
-                      <button onClick={() => handleDelete(p.id)} className="px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">Delete</button>
+                      <button onClick={() => handleDelete(p._id)} className="px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">Delete</button>
                     </div>
                   </td>
                 </tr>
               ))}
-              {properties.length === 0 && <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-400">No properties yet.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -95,25 +193,36 @@ const ManageProperties = () => {
                 <div>
                   <label className={labelClass}>Category</label>
                   <select className={inputClass} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-                    {categories.map(c => <option key={c}>{c}</option>)}
+                    {categories.map(c => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
                   </select>
                 </div>
-                <div><label className={labelClass}>Price</label><input required className={inputClass} value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="$1,200/mo" /></div>
+                <div><label className={labelClass}>Price (Monthly)</label><input required type="number" className={inputClass} value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="12000" /></div>
               </div>
               <div><label className={labelClass}>Location / Address</label><input required className={inputClass} value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="123 Main St, City" /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className={labelClass}>GPS Latitude</label><input className={inputClass} value={form.lat} onChange={e => setForm(f => ({ ...f, lat: e.target.value }))} placeholder="e.g. 40.7128" /></div>
-                <div><label className={labelClass}>GPS Longitude</label><input className={inputClass} value={form.lng} onChange={e => setForm(f => ({ ...f, lng: e.target.value }))} placeholder="e.g. -74.0060" /></div>
+                <div><label className={labelClass}>GPS Latitude</label><input className={inputClass} value={form.lat} readOnly placeholder="e.g. 40.7128" /></div>
+                <div><label className={labelClass}>GPS Longitude</label><input className={inputClass} value={form.lng} readOnly placeholder="e.g. -74.0060" /></div>
               </div>
+              
+              <div>
+                <label className={labelClass}>Pinpoint on Map</label>
+                <LocationPickerMap 
+                  initialLocation={{ lat: form.lat ? parseFloat(form.lat) : null, lng: form.lng ? parseFloat(form.lng) : null }}
+                  onLocationSelect={(loc) => setForm(f => ({ ...f, lat: loc.lat.toString(), lng: loc.lng.toString() }))}
+                />
+                <p className="text-xs text-slate-500 mt-1">Click on the map to automatically fill GPS coordinates.</p>
+              </div>
+
               <div><label className={labelClass}>Specs</label><input className={inputClass} value={form.specs} onChange={e => setForm(f => ({ ...f, specs: e.target.value }))} placeholder="3 Beds, 2 Baths • 1,500 sq ft" /></div>
               <div>
                 <label className={labelClass}>Status</label>
                 <select className={inputClass} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-                  <option>Active</option><option>Inactive</option>
+                  <option value="Available">Available</option>
+                  <option value="Unavailable">Unavailable</option>
                 </select>
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="submit" className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-sm transition-colors">{editingId ? 'Save Changes' : 'Add Property'}</button>
+                <button type="submit" disabled={submitting} className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-50">{submitting ? 'Saving...' : (editingId ? 'Save Changes' : 'Add Property')}</button>
                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-sm transition-colors">Cancel</button>
               </div>
             </form>

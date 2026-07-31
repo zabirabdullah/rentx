@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
+import NotificationDropdown from './NotificationDropdown';
 
 const roleColors = {
   owner: 'bg-blue-500',
@@ -44,14 +45,17 @@ const Navbar = () => {
 
         <div className="navbar-actions">
           {user ? (
-            /* Profile Dropdown */
-            <div className="relative" ref={dropdownRef}>
+            <div className="flex items-center gap-4">
+              <NotificationDropdown />
+              
+              {/* Profile Dropdown */}
+              <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen(prev => !prev)}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-full border-2 border-green-200 hover:border-green-400 transition-colors"
               >
                 <div className={`w-7 h-7 rounded-full ${roleColors[user.role] || 'bg-green-500'} flex items-center justify-center text-white text-xs font-bold`}>
-                  {user.avatar}
+                  {user.name ? user.name.charAt(0) : '?'}
                 </div>
                 <span className="text-sm font-semibold text-slate-700 hidden sm:block">{user.name.split(' ')[0]}</span>
                 <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -105,6 +109,7 @@ const Navbar = () => {
                 </div>
               )}
             </div>
+          </div>
           ) : (
             <>
               <Link to="/login" className="btn-secondary">Log in</Link>

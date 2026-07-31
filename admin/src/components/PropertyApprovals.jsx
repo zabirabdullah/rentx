@@ -1,41 +1,60 @@
-import React, { useState } from 'react';
-
-const mockProperties = [
-  { id: 1, title: 'Modern 3BR Apartment', category: 'House', owner: 'Sarah Johnson', price: '$1,200/mo', status: 'Pending' },
-  { id: 2, title: 'Downtown Office Space', category: 'Office', owner: 'John Smith', price: '$3,500/mo', status: 'Approved' },
-  { id: 3, title: 'Warehouse Unit B', category: 'Godown', owner: 'Ahmed Khan', price: '$800/mo', status: 'Pending' },
-  { id: 4, title: 'Retail Commercial Plaza', category: 'Commercial', owner: 'Li Wei', price: '$2,100/mo', status: 'Rejected' },
-  { id: 5, title: 'Secure Parking Garage', category: 'Garage', owner: 'Alice Brown', price: '$150/mo', status: 'Approved' },
-  { id: 6, title: 'ATM Corner Space', category: 'ATM Booth', owner: 'John Smith', price: '$500/mo', status: 'Pending' },
-  { id: 7, title: 'Studio Flat - City Center', category: 'House', owner: 'Sarah Johnson', price: '$750/mo', status: 'Approved' },
-];
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { auth } from '../config/firebase';
 
 const statusStyles = {
-  Pending: 'bg-yellow-100 text-yellow-700',
-  Approved: 'bg-green-100 text-green-700',
-  Rejected: 'bg-red-100 text-red-700',
+  Available: 'bg-green-100 text-green-700',
+  Unavailable: 'bg-slate-100 text-slate-700',
 };
 
 const categoryStyles = {
-  House: 'bg-blue-50 text-blue-700',
-  Office: 'bg-indigo-50 text-indigo-700',
-  Godown: 'bg-orange-50 text-orange-700',
-  Commercial: 'bg-teal-50 text-teal-700',
-  Garage: 'bg-slate-100 text-slate-700',
-  'ATM Booth': 'bg-purple-50 text-purple-700',
+  house: 'bg-blue-50 text-blue-700',
+  office: 'bg-indigo-50 text-indigo-700',
+  godown: 'bg-orange-50 text-orange-700',
+  commercial: 'bg-teal-50 text-teal-700',
+  garage: 'bg-slate-100 text-slate-700',
+  'atm booth': 'bg-purple-50 text-purple-700',
 };
 
 const PropertyApprovals = () => {
-  const [properties, setProperties] = useState(mockProperties);
+  const { user } = useAuth();
+  const [properties, setProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [modalProperty, setModalProperty] = useState(null);
 
-  const updateStatus = (id, newStatus) => {
-    setProperties(prev => prev.map(p => p.id === id ? { ...p, status: newStatus } : p));
-  };
+  useEffect(() => {
+    const fetchProperties = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/properties');
+        if (response.ok) {
+          const data = await response.json();
+          setProperties(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch properties:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (user) fetchProperties();
+  }, [user]);
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Remove this listing permanently?')) {
-      setProperties(prev => prev.filter(p => p.id !== id));
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        const res = await fetch(`http://localhost:5000/api/properties/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          setProperties(prev => prev.filter(p => p._id !== id));
+        } else {
+          alert('Failed to delete property');
+        }
+      } catch (error) {
+        console.error('Delete error', error);
+      }
     }
   };
 
@@ -49,8 +68,9 @@ const PropertyApprovals = () => {
 
       {/* Status Summary Pills */}
       <div className="flex flex-wrap gap-3">
-        {['Pending', 'Approved', 'Rejected'].map(s => {
-          const count = properties.filter(p => p.status === s).length;
+        {['Available', 'Unavailable'].map(s => {
+          const isAvail = s === 'Available';
+          const count = properties.filter(p => p.isAvailable === isAvail).length;
           return (
             <div key={s} className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 ${statusStyles[s]}`}>
               <span>{s}</span>
@@ -72,27 +92,31 @@ const PropertyApprovals = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {properties.map(prop => (
-                <tr key={prop.id} className="hover:bg-slate-50 transition-colors">
+              {loading ? (
+                <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-500">Loading properties...</td></tr>
+              ) : properties.length === 0 ? (
+                <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-400">No properties found.</td></tr>
+              ) : properties.map(prop => {
+                const status = prop.isAvailable ? 'Available' : 'Unavailable';
+                return (
+                <tr key={prop._id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-5 py-3.5 font-medium text-slate-800">{prop.title}</td>
                   <td className="px-5 py-3.5">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${categoryStyles[prop.category] || 'bg-gray-100 text-gray-700'}`}>{prop.category}</span>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${categoryStyles[prop.category?.toLowerCase()] || 'bg-gray-100 text-gray-700'}`}>{prop.category}</span>
                   </td>
-                  <td className="px-5 py-3.5 text-slate-600">{prop.owner}</td>
-                  <td className="px-5 py-3.5 font-semibold text-slate-700">{prop.price}</td>
+                  <td className="px-5 py-3.5 text-slate-600">{prop.owner?.name || 'Unknown'}</td>
+                  <td className="px-5 py-3.5 font-semibold text-slate-700">৳{prop.price?.toLocaleString()}</td>
                   <td className="px-5 py-3.5">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusStyles[prop.status]}`}>{prop.status}</span>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusStyles[status]}`}>{status}</span>
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2">
                       <button onClick={() => setModalProperty(prop)} className="px-2.5 py-1 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">Review</button>
-                      <button onClick={() => updateStatus(prop.id, 'Approved')} className="px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">Approve</button>
-                      <button onClick={() => updateStatus(prop.id, 'Rejected')} className="px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">Reject</button>
-                      <button onClick={() => handleDelete(prop.id)} className="px-2.5 py-1 text-xs font-medium text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">Remove</button>
+                      <button onClick={() => handleDelete(prop._id)} className="px-2.5 py-1 text-xs font-medium text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">Remove</button>
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>
@@ -120,7 +144,7 @@ const PropertyApprovals = () => {
               </button>
             </div>
             <dl className="space-y-3 text-sm">
-              {[['Title', modalProperty.title], ['Category', modalProperty.category], ['Owner', modalProperty.owner], ['Price', modalProperty.price]].map(([k, v]) => (
+              {[['Title', modalProperty.title], ['Category', modalProperty.category], ['Owner', modalProperty.owner?.name || 'Unknown'], ['Price', `৳${modalProperty.price?.toLocaleString()}`]].map(([k, v]) => (
                 <div key={k} className="flex justify-between border-b border-slate-100 pb-2">
                   <dt className="text-slate-500 font-medium">{k}</dt>
                   <dd className="text-slate-800 font-semibold">{v}</dd>
@@ -128,12 +152,11 @@ const PropertyApprovals = () => {
               ))}
               <div className="flex justify-between">
                 <dt className="text-slate-500 font-medium">Status</dt>
-                <dd><span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusStyles[modalProperty.status]}`}>{modalProperty.status}</span></dd>
+                <dd><span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusStyles[modalProperty.isAvailable ? 'Available' : 'Unavailable']}`}>{modalProperty.isAvailable ? 'Available' : 'Unavailable'}</span></dd>
               </div>
             </dl>
             <div className="flex gap-3 mt-6">
-              <button onClick={() => { updateStatus(modalProperty.id, 'Approved'); setModalProperty(null); }} className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-sm transition-colors">Approve</button>
-              <button onClick={() => { updateStatus(modalProperty.id, 'Rejected'); setModalProperty(null); }} className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg text-sm transition-colors">Reject</button>
+              <button onClick={() => { setModalProperty(null); }} className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-sm transition-colors">Close</button>
             </div>
           </div>
         </div>

@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useUser } from '../../context/UserContext';
 import Navbar from '../Navbar';
 import Footer from '../Footer';
 
 const ServiceRequestForm = () => {
   const { companyId } = useParams();
   const navigate = useNavigate();
+  const { user } = useUser();
+  
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+    }
+  }, [user, navigate]);
   
   const [serviceType, setServiceType] = useState('moving');
   const [step, setStep] = useState(1);

@@ -1,5 +1,6 @@
 import React from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useUser } from '../../context/UserContext';
 import Navbar from '../Navbar';
 import Footer from '../Footer';
 
@@ -11,6 +12,9 @@ const mockCompanies = [
 
 const CompanyDetailsPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useUser();
+  
   const company = mockCompanies.find(c => c.id === parseInt(id)) || {
     ...mockCompanies[0],
     id: parseInt(id),
@@ -81,12 +85,12 @@ const CompanyDetailsPage = () => {
                     </div>
                   </div>
                   
-                  <Link 
-                    to={`/request-service/${company.id}`}
+                  <button 
+                    onClick={() => user ? navigate(`/request-service/${company.id}`) : navigate('/login')}
                     className="block text-center w-full bg-green-600 hover:bg-green-700 text-white py-3.5 px-4 rounded-xl font-bold transition-all shadow-md hover:shadow-lg"
                   >
                     Request Service
-                  </Link>
+                  </button>
                 </div>
               </div>
             </div>

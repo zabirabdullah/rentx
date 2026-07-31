@@ -77,14 +77,18 @@ const calculateDistanceKm = (lat1, lng1, lat2, lng2) => {
 };
 
 const buildPropertyQuery = (queryParams, { availableOnly = true } = {}) => {
-  const { category, minPrice, maxPrice, search, lat, lng, radius } = queryParams;
+  const { category, minPrice, maxPrice, search, lat, lng, radius, ownerId } = queryParams;
   const query = {};
   const numericLat = toNumber(lat);
   const numericLng = toNumber(lng);
   const numericRadius = toNumber(radius);
 
-  if (availableOnly) {
+  if (availableOnly && !ownerId) {
     query.isAvailable = true;
+  }
+
+  if (ownerId) {
+    query.ownerId = ownerId;
   }
 
   if (category) {
