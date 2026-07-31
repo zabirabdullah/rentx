@@ -1,8 +1,6 @@
 import express from "express";
 import {
   getProperties,
-  getPropertyMap,
-  searchPropertiesByLocation,
   getPropertyById,
   createProperty,
   updateProperty,
@@ -17,12 +15,6 @@ const router = express.Router();
 router.route("/")
   .get(getProperties) // Public: anyone can browse listings
   .post(protect, authorize(["owner"]), createProperty); // Private: only owners can list properties
-
-// @route   /api/properties/map
-router.get("/map", getPropertyMap); // Public: map-friendly property feed
-
-// @route   /api/properties/search/location
-router.get("/search/location", searchPropertiesByLocation); // Public: location-specific search
 
 // @route   /api/properties/:id
 router.route("/:id")

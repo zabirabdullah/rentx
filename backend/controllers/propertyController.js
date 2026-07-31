@@ -54,14 +54,14 @@ const normalizeLocation = ({ location, latitude, longitude, lat, lng }) => {
     return null;
   }
 
-  const lat = Number(latitude);
-  const lng = Number(longitude);
+  const parsedLat = Number(latitude);
+  const parsedLng = Number(longitude);
 
-  if (Number.isNaN(lat) || Number.isNaN(lng)) {
+  if (Number.isNaN(parsedLat) || Number.isNaN(parsedLng)) {
     return null;
   }
 
-  return { lat, lng };
+  return { lat: parsedLat, lng: parsedLng };
 };
 
 const calculateDistanceKm = (lat1, lng1, lat2, lng2) => {
@@ -156,10 +156,11 @@ const formatMapProperty = (property, viewerId, locationFilter = null) => {
   return obj;
 };
 
-// @desc    Get all properties (with basic filtering)
+// @desc    Get all properties (with filtering, search, and radius)
 // @route   GET /api/properties
 // @access  Public
 const getProperties = asyncHandler(async (req, res) => {
+  // buildPropertyQuery automatically handles text search and location radius
   const { query, locationFilter } = buildPropertyQuery(req.query);
 
   if (locationFilter && locationFilter.invalid) {
@@ -170,63 +171,18 @@ const getProperties = asyncHandler(async (req, res) => {
   // Populate owner details so the frontend can display contact info
   const properties = await Property.find(query).populate("ownerId", "name email phone");
 
-  // Strip phone from owner if showPhone is false
-  const results = properties.map((property) => formatProperty(property, req.user?._id));
+  // Format properties (strips hidden phones) and calculates distanceKm if locationFilter exists
+  let results = properties.map((property) => formatMapProperty(property, req.user?._id, locationFilter));
 
-  res.json(results);
-});
-
-// @desc    Get properties for the map view
-// @route   GET /api/properties/map
-// @access  Public
-const getPropertyMap = asyncHandler(async (req, res) => {
-  const { query, locationFilter } = buildPropertyQuery(req.query);
-
-  if (locationFilter && locationFilter.invalid) {
-    res.status(400);
-    throw new Error("Latitude, longitude, and radius must all be valid numbers");
-  }
-
-  const properties = await Property.find(query)
-    .select("ownerId category address holdingNo area rentPrice salePrice location images description isAvailable showPhone name storey position elevator bedroom bathroom balcony")
-    .populate("ownerId", "name email phone");
-
-  const results = properties
-    .map((property) => formatMapProperty(property, req.user?._id, locationFilter))
-    .sort((left, right) => {
+  // If a location search was used, automatically sort by closest distance
+  if (locationFilter) {
+    results = results.sort((left, right) => {
       if (left.distanceKm === undefined || right.distanceKm === undefined) {
         return 0;
       }
       return left.distanceKm - right.distanceKm;
     });
-
-  res.json(results);
-});
-
-// @desc    Search properties by location text or coordinates
-// @route   GET /api/properties/search/location
-// @access  Public
-const searchPropertiesByLocation = asyncHandler(async (req, res) => {
-  const locationSearch = req.query.query || req.query.location || req.query.search;
-  const { query, locationFilter } = buildPropertyQuery(
-    {
-      ...req.query,
-      search: locationSearch || req.query.search,
-    }
-  );
-
-  if (locationFilter && locationFilter.invalid) {
-    res.status(400);
-    throw new Error("Latitude, longitude, and radius must all be valid numbers");
   }
-
-  if (!locationSearch && !locationFilter) {
-    res.status(400);
-    throw new Error("Provide a location query or latitude, longitude, and radius");
-  }
-
-  const properties = await Property.find(query).populate("ownerId", "name email phone");
-  const results = properties.map((property) => formatMapProperty(property, req.user?._id, locationFilter));
 
   res.json(results);
 });
@@ -386,4 +342,4 @@ const deleteProperty = asyncHandler(async (req, res) => {
   res.json({ message: "Property removed" });
 });
 
-export { getProperties, getPropertyMap, searchPropertiesByLocation, getPropertyById, createProperty, updateProperty, deleteProperty };
+export { getProperties, getPropertyById, createProperty, updateProperty, deleteProperty };
