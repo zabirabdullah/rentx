@@ -40,7 +40,17 @@ const Navbar = () => {
           <li><Link to="/properties">Browse Properties</Link></li>
           <li><a href="/#map">Map View</a></li>
           <li><Link to="/companies">Services</Link></li>
-          <li><a href="/#list">List Property</a></li>
+          <li><Link to="/about">About Us</Link></li>
+          {(user && user.role === 'owner') && (
+            <li>
+              <Link 
+                to="/dashboard/properties" 
+                style={{ color: 'var(--primary-green)' }}
+              >
+                List Property
+              </Link>
+            </li>
+          )}
         </ul>
 
         <div className="navbar-actions">

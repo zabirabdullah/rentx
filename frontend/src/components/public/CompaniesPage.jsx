@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import Navbar from '../Navbar';
 import Footer from '../Footer';
 
@@ -11,7 +11,18 @@ const mockCompanies = [
 ];
 
 const CompaniesPage = () => {
-  const [filter, setFilter] = useState('all');
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const initialService = queryParams.get('service') || 'all';
+
+  const [filter, setFilter] = useState(initialService);
+
+  useEffect(() => {
+    const currentService = queryParams.get('service');
+    if (currentService) {
+      setFilter(currentService);
+    }
+  }, [location.search]);
 
   const filteredCompanies = filter === 'all' 
     ? mockCompanies 

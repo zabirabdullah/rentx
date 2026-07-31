@@ -45,7 +45,7 @@ const LoginForm = () => {
       
       const userData = await response.json();
       login(userData);
-      navigate('/dashboard');
+      navigate('/');
     } catch (err) {
       setError(err.message || 'Failed to login');
       // If backend fails but firebase succeeded, we should ideally sign out from firebase

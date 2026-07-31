@@ -59,7 +59,7 @@ const RegistrationForm = () => {
       
       const userData = await response.json();
       login(userData);
-      navigate('/dashboard');
+      navigate('/');
     } catch (err) {
       setError(err.message || 'Failed to register');
     } finally {

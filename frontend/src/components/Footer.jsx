@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
   return (
@@ -13,30 +14,30 @@ const Footer = () => {
           <div className="footer-col">
             <h3>Properties</h3>
             <ul>
-              <li><a href="#houses">Houses & Apartments</a></li>
-              <li><a href="#offices">Office Spaces</a></li>
-              <li><a href="#commercial">Commercial</a></li>
-              <li><a href="#warehouses">Godowns & Warehouses</a></li>
+              <li><Link to="/properties?category=House">Houses & Apartments</Link></li>
+              <li><Link to="/properties?category=Office">Office Spaces</Link></li>
+              <li><Link to="/properties?category=Commercial">Commercial</Link></li>
+              <li><Link to="/properties?category=Godown">Godowns & Warehouses</Link></li>
             </ul>
           </div>
           
           <div className="footer-col">
             <h3>Services</h3>
             <ul>
-              <li><a href="#moving">Moving & Packing</a></li>
-              <li><a href="#cleaning">Deep Cleaning</a></li>
-              <li><a href="#maintenance">Maintenance</a></li>
-              <li><a href="#painting">Painting</a></li>
+              <li><Link to="/companies?service=moving">Moving & Packing</Link></li>
+              <li><Link to="/companies?service=cleaning">Deep Cleaning</Link></li>
+              <li><Link to="/companies?service=plumbing">Maintenance</Link></li>
+              <li><Link to="/companies?service=painting">Painting</Link></li>
             </ul>
           </div>
           
           <div className="footer-col">
             <h3>Company</h3>
             <ul>
-              <li><a href="#about">About Us</a></li>
-              <li><a href="#contact">Contact</a></li>
-              <li><a href="#privacy">Privacy Policy</a></li>
-              <li><a href="#terms">Terms of Service</a></li>
+              <li><Link to="/about#about">About Us</Link></li>
+              <li><Link to="/about#contact">Contact</Link></li>
+              <li><Link to="/about#privacy">Privacy Policy</Link></li>
+              <li><Link to="/about#terms">Terms of Service</Link></li>
             </ul>
           </div>
         </div>

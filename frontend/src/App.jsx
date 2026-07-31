@@ -34,6 +34,7 @@ import PropertyDetailsPage from './components/public/PropertyDetailsPage';
 import CompaniesPage from './components/public/CompaniesPage';
 import CompanyDetailsPage from './components/public/CompanyDetailsPage';
 import ServiceRequestForm from './components/public/ServiceRequestForm';
+import AboutPage from './components/public/AboutPage';
 
 import './index.css';
 
@@ -54,6 +55,7 @@ function App() {
         <ScrollToTop />
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/about" element={<AboutPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/properties" element={<PropertiesPage />} />

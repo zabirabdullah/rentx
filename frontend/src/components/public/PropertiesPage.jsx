@@ -1,13 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import Navbar from '../Navbar';
 import Footer from '../Footer';
 
 const PropertiesPage = () => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const initialCategory = queryParams.get('category') || 'All Categories';
   const [searchTerm, setSearchTerm] = useState('');
-  const [category, setCategory] = useState('All Categories');
+  const [category, setCategory] = useState(initialCategory);
+
+  useEffect(() => {
+    const currentCategory = queryParams.get('category');
+    if (currentCategory) {
+      setCategory(currentCategory);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     const fetchProperties = async () => {

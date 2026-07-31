@@ -1,9 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const services = [
   {
     id: 1,
     title: 'Moving & Relocation',
+    serviceKey: 'moving',
     desc: 'Professional movers to help you shift to your new space effortlessly.',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -17,6 +19,7 @@ const services = [
   {
     id: 2,
     title: 'Deep Cleaning',
+    serviceKey: 'cleaning',
     desc: 'Thorough cleaning services before you move in or after you move out.',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -28,6 +31,7 @@ const services = [
   {
     id: 3,
     title: 'Electricians & Plumbers',
+    serviceKey: 'plumbing',
     desc: 'Reliable handymen to fix any maintenance issues quickly.',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -38,6 +42,7 @@ const services = [
   {
     id: 4,
     title: 'Painting & Renovation',
+    serviceKey: 'painting',
     desc: 'Give your new space a fresh look with our expert painters.',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -48,6 +53,8 @@ const services = [
 ];
 
 const ServicesPreview = () => {
+  const navigate = useNavigate();
+
   return (
     <section id="services" className="services-section">
       <div className="container">
@@ -63,7 +70,11 @@ const ServicesPreview = () => {
               <div className="service-content">
                 <h3 className="service-title">{service.title}</h3>
                 <p className="service-desc">{service.desc}</p>
-                <button className="btn-secondary" style={{ width: '100%', marginTop: '10px' }}>
+                <button 
+                  className="btn-secondary" 
+                  style={{ width: '100%', marginTop: '10px' }}
+                  onClick={() => navigate(`/companies?service=${service.serviceKey}`)}
+                >
                   Book Service
                 </button>
               </div>
