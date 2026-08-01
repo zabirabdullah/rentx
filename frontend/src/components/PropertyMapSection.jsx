@@ -66,11 +66,11 @@ const PropertyMapSection = ({ properties, selectedCategory = 'All', onCategoryCh
     const title = (property.category || 'property').replace('_', ' ');
     const price = property.rentPrice ? property.rentPrice.toLocaleString() : 'N/A';
     return L.divIcon({
-      className: 'custom-marker',
-      html: `<div class="custom-marker-badge capitalize flex items-center gap-1"><span>${iconSymbol}</span> <span>${title} - ৳${price}</span></div>`,
-      iconSize: [115, 32],
-      iconAnchor: [57, 35],
-      popupAnchor: [0, -35]
+      className: 'custom-marker-wrapper',
+      html: `<div class="custom-marker-badge capitalize flex items-center gap-1 justify-center"><span>${iconSymbol}</span> <span>${title} - ৳${price}</span></div>`,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+      popupAnchor: [0, -40]
     });
   };
 

@@ -465,6 +465,11 @@
   z-index: 1;
 }
 
+/* Ensure the wrapper doesn't crop */
+.custom-marker-wrapper {
+  overflow: visible !important;
+}
+
 /* Custom Marker Badge */
 .custom-marker-badge {
   background: var(--primary-green);
@@ -475,8 +480,12 @@
   font-size: 0.85rem;
   box-shadow: 0 4px 6px rgba(0,0,0,0.3);
   white-space: nowrap;
+  width: max-content;
   border: 2px solid white;
-  position: relative;
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, -8px);
   text-align: center;
 }
 .custom-marker-badge::after {
