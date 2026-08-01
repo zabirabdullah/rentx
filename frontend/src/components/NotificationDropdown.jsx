@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config/api.js";
 import React, { useState, useEffect, useRef } from 'react';
 import { useUser } from '../context/UserContext';
 import { auth } from '../config/firebase';
@@ -28,7 +29,7 @@ const NotificationDropdown = () => {
         const token = await auth.currentUser?.getIdToken();
         if (!token) return;
 
-        const response = await fetch('http://localhost:5000/api/notifications', {
+        const response = await fetch(`${API_BASE_URL}/api/notifications`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         

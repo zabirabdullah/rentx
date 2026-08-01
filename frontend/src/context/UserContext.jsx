@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { API_BASE_URL } from "../config/api.js";
+import { createContext, useContext, useState, useEffect } from 'react';
 import { auth } from '../config/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
@@ -13,7 +14,7 @@ export const UserProvider = ({ children }) => {
       if (firebaseUser) {
         try {
           const token = await firebaseUser.getIdToken();
-          const response = await fetch('http://localhost:5000/api/auth/sync', {
+          const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

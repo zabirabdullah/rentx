@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../config/api.js";
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
@@ -19,7 +20,7 @@ const PropertyDetailsPage = () => {
   useEffect(() => {
     const fetchProperty = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/properties/${id}`);
+        const response = await fetch(`${API_BASE_URL}/api/properties/${id}`);
         if (!response.ok) {
           throw new Error('Property not found');
         }
@@ -40,7 +41,7 @@ const PropertyDetailsPage = () => {
     }
     try {
       const token = await auth.currentUser?.getIdToken();
-      const res = await fetch('http://localhost:5000/api/rental-requests', {
+      const res = await fetch(`${API_BASE_URL}/api/rental-requests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -79,7 +80,7 @@ const PropertyDetailsPage = () => {
     setReportSubmitting(true);
     try {
       const token = await auth.currentUser?.getIdToken();
-      const res = await fetch('http://localhost:5000/api/reports', {
+      const res = await fetch(`${API_BASE_URL}/api/reports`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

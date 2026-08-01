@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config/api.js";
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { auth } from '../config/firebase';
@@ -30,7 +31,7 @@ const PropertyApprovals = () => {
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/properties');
+        const response = await fetch(`${API_BASE_URL}/api/properties`);
         if (response.ok) {
           const data = await response.json();
           setProperties(data);
@@ -52,7 +53,7 @@ const PropertyApprovals = () => {
     if (confirmModal.propertyId) {
       try {
         const token = await auth.currentUser?.getIdToken();
-        const res = await fetch(`http://localhost:5000/api/properties/${confirmModal.propertyId}`, {
+        const res = await fetch(`${API_BASE_URL}/api/properties/${confirmModal.propertyId}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` }
         });

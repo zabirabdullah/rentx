@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../config/api.js";
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
@@ -41,7 +42,7 @@ const ServiceRequestForm = () => {
     
     const fetchCompany = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/companies/${companyId}`);
+        const res = await fetch(`${API_BASE_URL}/api/companies/${companyId}`);
         if (res.ok) {
           const data = await res.json();
           setCompany(data);
@@ -97,7 +98,7 @@ const ServiceRequestForm = () => {
         payload.spaceArea = Number(spaceArea);
       }
 
-      const res = await fetch('http://localhost:5000/api/service-requests', {
+      const res = await fetch(`${API_BASE_URL}/api/service-requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload)

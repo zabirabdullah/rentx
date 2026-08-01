@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/api.js";
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../../../context/UserContext';
@@ -28,7 +29,7 @@ const CompanyOverview = () => {
       try {
         if (!user) return;
         const token = await auth.currentUser?.getIdToken();
-        const res = await fetch('http://localhost:5000/api/service-requests/my', {
+        const res = await fetch(`${API_BASE_URL}/api/service-requests/my`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         

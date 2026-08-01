@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/api.js";
 import React, { useState, useEffect } from 'react';
 import { auth } from '../../../config/firebase';
 
@@ -9,7 +10,7 @@ const AdminUsersPage = () => {
     const fetchUsers = async () => {
       try {
         const token = await auth.currentUser?.getIdToken();
-        const response = await fetch('http://localhost:5000/api/users', {
+        const response = await fetch(`${API_BASE_URL}/api/users`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         

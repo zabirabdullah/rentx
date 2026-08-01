@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/api.js";
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../../../context/UserContext';
@@ -23,8 +24,8 @@ const OwnerOverview = () => {
         const token = await auth.currentUser?.getIdToken();
         
         const [propsRes, reqsRes] = await Promise.all([
-          fetch(`http://localhost:5000/api/properties?ownerId=${user._id}`),
-          fetch('http://localhost:5000/api/rental-requests/my', { headers: { Authorization: `Bearer ${token}` } })
+          fetch(`${API_BASE_URL}/api/properties?ownerId=${user._id}`),
+          fetch(`${API_BASE_URL}/api/rental-requests/my`, { headers: { Authorization: `Bearer ${token}` } })
         ]);
 
         if (propsRes.ok && reqsRes.ok) {

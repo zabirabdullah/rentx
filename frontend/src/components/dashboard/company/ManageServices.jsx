@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/api.js";
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../../../context/UserContext';
 import { auth } from '../../../config/firebase';
@@ -22,7 +23,7 @@ const ManageServices = () => {
       try {
         if (!user) return;
         const token = await auth.currentUser?.getIdToken();
-        const res = await fetch('http://localhost:5000/api/companies/my', {
+        const res = await fetch(`${API_BASE_URL}/api/companies/my`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -83,8 +84,8 @@ const ManageServices = () => {
       const token = await auth.currentUser?.getIdToken();
       const method = profileId ? 'PUT' : 'POST';
       const url = profileId 
-        ? `http://localhost:5000/api/companies/${profileId}` 
-        : `http://localhost:5000/api/companies`;
+        ? `${API_BASE_URL}/api/companies/${profileId}` 
+        : `${API_BASE_URL}/api/companies`;
 
       const res = await fetch(url, {
         method,

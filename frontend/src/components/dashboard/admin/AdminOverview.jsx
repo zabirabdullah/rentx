@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/api.js";
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../../../context/UserContext';
 import { auth } from '../../../config/firebase';
@@ -18,9 +19,9 @@ const AdminOverview = () => {
         
         // Fetch users, properties, and reports in parallel
         const [usersRes, propsRes, reportsRes] = await Promise.all([
-          fetch('http://localhost:5000/api/users', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('http://localhost:5000/api/properties'),
-          fetch('http://localhost:5000/api/reports', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/api/users`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/api/properties`),
+          fetch(`${API_BASE_URL}/api/reports`, { headers: { Authorization: `Bearer ${token}` } }),
         ]);
 
         const [usersData, propsData, reportsData] = await Promise.all([

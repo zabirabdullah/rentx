@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config/api.js";
 import React, { useState, useEffect } from 'react';
 import { auth } from '../config/firebase';
 
@@ -22,7 +23,7 @@ const ReportsManagement = () => {
   const fetchReports = async () => {
     try {
       const token = await auth.currentUser?.getIdToken();
-      const res = await fetch('http://localhost:5000/api/reports', {
+      const res = await fetch(`${API_BASE_URL}/api/reports`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -40,7 +41,7 @@ const ReportsManagement = () => {
     setProcessing(true);
     try {
       const token = await auth.currentUser?.getIdToken();
-      const res = await fetch(`http://localhost:5000/api/reports/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/reports/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

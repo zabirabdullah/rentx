@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../config/api.js";
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
@@ -14,7 +15,7 @@ const CompanyDetailsPage = () => {
   useEffect(() => {
     const fetchCompany = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/companies/${id}`);
+        const res = await fetch(`${API_BASE_URL}/api/companies/${id}`);
         if (res.ok) {
           const data = await res.json();
           setCompany(data);

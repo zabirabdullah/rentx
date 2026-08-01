@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/api.js";
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../../../context/UserContext';
 import { auth } from '../../../config/firebase';
@@ -23,7 +24,7 @@ const ClientJobs = () => {
       try {
         if (!user) return;
         const token = await auth.currentUser?.getIdToken();
-        const res = await fetch('http://localhost:5000/api/service-requests/my', {
+        const res = await fetch(`${API_BASE_URL}/api/service-requests/my`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -57,7 +58,7 @@ const ClientJobs = () => {
 
     try {
       const token = await auth.currentUser?.getIdToken();
-      const res = await fetch(`http://localhost:5000/api/service-requests/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/service-requests/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status, estimatedCost, companyNote })

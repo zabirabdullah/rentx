@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config/api.js";
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { auth } from '../config/firebase';
@@ -22,10 +23,10 @@ const DashboardHome = () => {
         const headers = { Authorization: `Bearer ${token}` };
 
         const [usersRes, propsRes, reportsRes, companiesRes] = await Promise.all([
-          fetch('http://localhost:5000/api/users', { headers }),
-          fetch('http://localhost:5000/api/properties'),
-          fetch('http://localhost:5000/api/reports', { headers }),
-          fetch('http://localhost:5000/api/companies'),
+          fetch(`${API_BASE_URL}/api/users`, { headers }),
+          fetch(`${API_BASE_URL}/api/properties`),
+          fetch(`${API_BASE_URL}/api/reports`, { headers }),
+          fetch(`${API_BASE_URL}/api/companies`),
         ]);
 
         const [usersData, propsData, reportsData, companiesData] = await Promise.all([

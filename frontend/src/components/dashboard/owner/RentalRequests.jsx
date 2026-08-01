@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/api.js";
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../../../context/UserContext';
 import { auth } from '../../../config/firebase';
@@ -19,7 +20,7 @@ const RentalRequests = () => {
     const fetchRequests = async () => {
       try {
         const token = await auth.currentUser?.getIdToken();
-        const res = await fetch('http://localhost:5000/api/rental-requests/my', {
+        const res = await fetch(`${API_BASE_URL}/api/rental-requests/my`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -59,7 +60,7 @@ const RentalRequests = () => {
 
     try {
       const token = await auth.currentUser?.getIdToken();
-      const res = await fetch(`http://localhost:5000/api/rental-requests/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/rental-requests/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status, ownerNote })
@@ -68,7 +69,7 @@ const RentalRequests = () => {
       if (res.ok) {
         const updated = await res.json();
         // Re-fetch to ensure populated property & tenant objects remain intact
-        const updatedRes = await fetch('http://localhost:5000/api/rental-requests/my', {
+        const updatedRes = await fetch(`${API_BASE_URL}/api/rental-requests/my`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (updatedRes.ok) {

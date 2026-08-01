@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/api.js";
 import React, { useState, useEffect } from 'react';
 import LocationPickerMap from '../../LocationPickerMap';
 import { useUser } from '../../../context/UserContext';
@@ -21,7 +22,7 @@ const ManageProperties = () => {
     const fetchMyProperties = async () => {
       try {
         if (!user || !user._id) return;
-        const response = await fetch(`http://localhost:5000/api/properties?ownerId=${user._id}`);
+        const response = await fetch(`${API_BASE_URL}/api/properties?ownerId=${user._id}`);
         if (response.ok) {
           const data = await response.json();
           setProperties(data);
@@ -63,7 +64,7 @@ const ManageProperties = () => {
     if (window.confirm('Delete this listing?')) {
       try {
         const token = await auth.currentUser?.getIdToken();
-        const res = await fetch(`http://localhost:5000/api/properties/${id}`, {
+        const res = await fetch(`${API_BASE_URL}/api/properties/${id}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -85,7 +86,7 @@ const ManageProperties = () => {
         for (const file of imageFiles) {
           const formData = new FormData();
           formData.append('image', file);
-          const upRes = await fetch('http://localhost:5000/api/upload', {
+          const upRes = await fetch(`${API_BASE_URL}/api/upload`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
             body: formData
@@ -127,7 +128,7 @@ const ManageProperties = () => {
       }
 
       if (editingId) {
-        const res = await fetch(`http://localhost:5000/api/properties/${editingId}`, {
+        const res = await fetch(`${API_BASE_URL}/api/properties/${editingId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify(payload)
@@ -139,7 +140,7 @@ const ManageProperties = () => {
           alert('Failed to update: ' + (await res.text()));
         }
       } else {
-        const res = await fetch(`http://localhost:5000/api/properties`, {
+        const res = await fetch(`${API_BASE_URL}/api/properties`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify(payload)

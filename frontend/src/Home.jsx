@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "./config/api.js";
 import { useState, useEffect, useRef } from 'react';
 import './Home.css';
 import Navbar from './components/Navbar';
@@ -25,7 +26,7 @@ const Home = () => {
         if (filters.lng !== undefined) queryParams.append('lng', filters.lng);
         if (filters.radius !== undefined) queryParams.append('radius', filters.radius);
 
-        const response = await fetch(`http://localhost:5000/api/properties?${queryParams.toString()}`);
+        const response = await fetch(`${API_BASE_URL}/api/properties?${queryParams.toString()}`);
         if (response.ok) {
           const data = await response.json();
           // Filter to only properties that have valid lat/lng and are available

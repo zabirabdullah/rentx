@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config/api.js";
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { auth } from '../config/firebase';
@@ -22,7 +23,7 @@ const ServiceManagement = () => {
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/companies');
+        const res = await fetch(`${API_BASE_URL}/api/companies`);
         if (res.ok) {
           const data = await res.json();
           setCompanies(data);
@@ -44,7 +45,7 @@ const ServiceManagement = () => {
     if (confirmModal.companyId) {
       try {
         const token = await auth.currentUser?.getIdToken();
-        const res = await fetch(`http://localhost:5000/api/companies/${confirmModal.companyId}`, {
+        const res = await fetch(`${API_BASE_URL}/api/companies/${confirmModal.companyId}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` }
         });

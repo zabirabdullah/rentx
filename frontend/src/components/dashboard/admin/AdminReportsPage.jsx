@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/api.js";
 import React, { useState, useEffect } from 'react';
 import { auth } from '../../../config/firebase';
 import { Link } from 'react-router-dom';
@@ -9,7 +10,7 @@ const AdminReportsPage = () => {
   const fetchReports = async () => {
     try {
       const token = await auth.currentUser?.getIdToken();
-      const response = await fetch('http://localhost:5000/api/reports', {
+      const response = await fetch(`${API_BASE_URL}/api/reports`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.ok) {
@@ -30,7 +31,7 @@ const AdminReportsPage = () => {
   const handleAction = async (id, status, adminNote = 'Reviewed by admin') => {
     try {
       const token = await auth.currentUser?.getIdToken();
-      const response = await fetch(`http://localhost:5000/api/reports/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/reports/${id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',

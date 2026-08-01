@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/api.js";
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../../../context/UserContext';
 import { auth } from '../../../config/firebase';
@@ -20,7 +21,7 @@ const MyRentals = () => {
       try {
         if (!user) return;
         const token = await auth.currentUser?.getIdToken();
-        const res = await fetch('http://localhost:5000/api/rental-requests/my', {
+        const res = await fetch(`${API_BASE_URL}/api/rental-requests/my`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -40,7 +41,7 @@ const MyRentals = () => {
     if (!window.confirm('Are you sure you want to cancel this rental request?')) return;
     try {
       const token = await auth.currentUser?.getIdToken();
-      const res = await fetch(`http://localhost:5000/api/rental-requests/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/rental-requests/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: 'cancelled' })

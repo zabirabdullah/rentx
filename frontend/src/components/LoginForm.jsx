@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config/api.js";
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
@@ -30,7 +31,7 @@ const LoginForm = () => {
       const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
       const token = await userCredential.user.getIdToken();
       
-      const response = await fetch('http://localhost:5000/api/auth/sync', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

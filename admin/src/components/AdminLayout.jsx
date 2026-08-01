@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config/api.js";
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -65,7 +66,7 @@ const AdminLayout = () => {
       try {
         const token = await auth.currentUser?.getIdToken();
         if (!token) return;
-        const res = await fetch('http://localhost:5000/api/notifications', {
+        const res = await fetch(`${API_BASE_URL}/api/notifications`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -95,7 +96,7 @@ const AdminLayout = () => {
   const markAllAsRead = async () => {
     try {
       const token = await auth.currentUser?.getIdToken();
-      await fetch('http://localhost:5000/api/notifications/read-all', {
+      await fetch(`${API_BASE_URL}/api/notifications/read-all`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` }
       });
