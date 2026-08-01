@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './Home.css';
 import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
@@ -47,7 +47,13 @@ const Home = () => {
   };
 
   const handleCategorySelect = (category) => {
-    handleSearch({ category });
+    const targetCategory = category === 'All' ? '' : category;
+    handleSearch({ ...filters, category: targetCategory });
+  };
+
+  const handleMapCategoryChange = (category) => {
+    const targetCategory = category === 'All' ? '' : category;
+    setFilters(prev => ({ ...prev, category: targetCategory }));
   };
 
   return (
@@ -57,7 +63,11 @@ const Home = () => {
         <HeroSection onSearch={handleSearch} />
         <CategoryGrid onSelectCategory={handleCategorySelect} />
         <div ref={mapSectionRef}>
-          <PropertyMapSection properties={properties} />
+          <PropertyMapSection 
+            properties={properties} 
+            selectedCategory={filters.category || 'All'}
+            onCategoryChange={handleMapCategoryChange}
+          />
         </div>
         <ServicesPreview />
       </main>

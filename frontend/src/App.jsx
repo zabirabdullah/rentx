@@ -4,6 +4,7 @@ import ScrollToTop from './components/ScrollToTop';
 import Home from './Home';
 import RegisterPage from './components/RegisterPage';
 import LoginPage from './components/LoginPage';
+import ForgotPasswordPage from './components/ForgotPasswordPage';
 import DashboardLayout from './components/dashboard/DashboardLayout';
 
 // Owner pages
@@ -58,6 +59,7 @@ function App() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/properties" element={<PropertiesPage />} />
           <Route path="/properties/:id" element={<PropertyDetailsPage />} />
           <Route path="/companies" element={<CompaniesPage />} />

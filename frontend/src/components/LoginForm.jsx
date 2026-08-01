@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../config/firebase';
@@ -79,9 +79,9 @@ const LoginForm = () => {
           <label className="block text-sm font-medium text-gray-700" htmlFor="password">
             Password
           </label>
-          <a href="#" className="text-sm font-medium text-green-600 hover:text-green-500">
+          <Link to="/forgot-password" className="text-sm font-medium text-green-600 hover:text-green-500">
             Forgot your password?
-          </a>
+          </Link>
         </div>
         <input 
           type="password" 

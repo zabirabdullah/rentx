@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -23,39 +23,53 @@ function ChangeView({ properties }) {
   return null;
 }
 
-const PropertyMapSection = ({ properties }) => {
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [filteredProperties, setFilteredProperties] = useState(properties);
+const categoryIcons = {
+  house: '🏠',
+  office: '🏢',
+  commercial_space: '🏬',
+  godown: '📦',
+  garage: '🚗',
+  atm_booth: '🏧'
+};
+
+const PropertyMapSection = ({ properties, selectedCategory = 'All', onCategoryChange }) => {
+  const [localCategory, setLocalCategory] = useState('All');
+  const activeCategory = selectedCategory !== undefined && selectedCategory !== '' ? selectedCategory : localCategory;
+
   const categories = [
-    { label: 'All', value: 'All' },
-    { label: 'House', value: 'house' },
-    { label: 'Office', value: 'office' },
-    { label: 'Commercial', value: 'commercial_space' },
-    { label: 'Godown', value: 'godown' },
-    { label: 'Garage', value: 'garage' },
-    { label: 'ATM Booth', value: 'atm_booth' }
+    { label: 'All', value: 'All', icon: '📍' },
+    { label: 'House', value: 'house', icon: '🏠' },
+    { label: 'Office', value: 'office', icon: '🏢' },
+    { label: 'Commercial', value: 'commercial_space', icon: '🏬' },
+    { label: 'Godown', value: 'godown', icon: '📦' },
+    { label: 'Garage', value: 'garage', icon: '🚗' },
+    { label: 'ATM Booth', value: 'atm_booth', icon: '🏧' }
   ];
 
   // Default center (Chittagong, Bangladesh)
   const defaultCenter = [22.3569, 91.7832];
 
-  useEffect(() => {
-    if (activeCategory === 'All') {
-      setFilteredProperties(properties);
-    } else {
-      setFilteredProperties(properties.filter(p => p.category === activeCategory));
+  const handleCategoryClick = (catValue) => {
+    setLocalCategory(catValue);
+    if (onCategoryChange) {
+      onCategoryChange(catValue);
     }
-  }, [activeCategory, properties]);
+  };
 
-  // Create custom icon
+  const filteredProperties = activeCategory === 'All' || activeCategory === '' 
+    ? properties 
+    : properties.filter(p => p.category === activeCategory);
+
+  // Create custom icon with small category badge icon
   const createCustomIcon = (property) => {
+    const iconSymbol = categoryIcons[property.category] || '📍';
     const title = (property.category || 'property').replace('_', ' ');
     const price = property.rentPrice ? property.rentPrice.toLocaleString() : 'N/A';
     return L.divIcon({
       className: 'custom-marker',
-      html: `<div class="custom-marker-badge capitalize">${title} - ৳${price}</div>`,
-      iconSize: [100, 30],
-      iconAnchor: [50, 35],
+      html: `<div class="custom-marker-badge capitalize flex items-center gap-1"><span>${iconSymbol}</span> <span>${title} - ৳${price}</span></div>`,
+      iconSize: [115, 32],
+      iconAnchor: [57, 35],
       popupAnchor: [0, -35]
     });
   };
@@ -89,10 +103,10 @@ const PropertyMapSection = ({ properties }) => {
           {categories.map(cat => (
             <button 
               key={cat.value} 
-              className={`filter-pill ${activeCategory === cat.value ? 'active' : ''}`}
-              onClick={() => setActiveCategory(cat.value)}
+              className={`filter-pill ${activeCategory === cat.value || (cat.value === 'All' && (activeCategory === '' || activeCategory === 'All')) ? 'active' : ''}`}
+              onClick={() => handleCategoryClick(cat.value)}
             >
-              {cat.label}
+              <span className="mr-1">{cat.icon}</span> {cat.label}
             </button>
           ))}
           <button className="btn-secondary" style={{ padding: '8px 16px' }} onClick={handleCenterMap}>
